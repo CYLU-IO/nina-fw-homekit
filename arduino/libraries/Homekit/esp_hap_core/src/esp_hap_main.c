@@ -310,42 +310,49 @@ int hap_start(void)
 
     if (!hap_get_first_acc()) {
         ESP_MFI_DEBUG(ESP_MFI_DEBUG_ERR, "Failed to start HAP. Please add an Accessory before hap_start()");
-        return HAP_FAIL;
+        //return HAP_FAIL;
+        return 9;
     }
 
     ret = hap_acc_setup_init();
     if (ret != HAP_SUCCESS) {
          ESP_MFI_DEBUG(ESP_MFI_DEBUG_ERR, "Accessory Setup init failed");
-         return ret;
+         //return ret;
+         return 8;
     }
 
     ret = hap_httpd_start();
     if (ret != HAP_SUCCESS) {
          ESP_MFI_DEBUG(ESP_MFI_DEBUG_ERR, "HTTPD START Failed [%d]", ret);
-         return ret;
+         //return ret;
+         return 7;
     }
 
     ret = hap_event_queue_init();
     if (ret != HAP_SUCCESS) {
         ESP_MFI_DEBUG(ESP_MFI_DEBUG_ERR, "Queue Initialisation for Event Notifications Failed");
-        return ret;
+        //return ret;
+        return 6;
     }
 
     ret = hap_loop_start();
     if (ret != 0) {
         ESP_MFI_DEBUG(ESP_MFI_DEBUG_ERR, "HAP Loop Failed: [%d]", ret);
-        return ret;
+        //return ret;
+        return 5;
     }
     ret = hap_mdns_init();
     if (ret != 0 ) {
         ESP_MFI_DEBUG(ESP_MFI_DEBUG_ERR, "HAP mDNS Init failed");
-        return ret;
+        //return ret;
+        return 4;
     }
 
     ret = hap_ip_services_start();
     if (ret != 0) {
         ESP_MFI_DEBUG(ESP_MFI_DEBUG_ERR, "HAP IP Services Start Failed [%d]", ret);
-        return ret;
+        //return ret;
+        return 3;
     }
     return HAP_SUCCESS;
 }

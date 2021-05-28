@@ -37,7 +37,7 @@
 #include <hap_apple_chars.h>
 
 //#include <app_wifi.h>
-#include <app_hap_setup_payload.h>
+//#include <app_hap_setup_payload.h>
 
 static const char *TAG = "HAP outlet";
 
@@ -193,9 +193,9 @@ static void smart_outlet_thread_entry(void *p)
     /* Unique four character Setup Id. Default: ES32 */
     hap_set_setup_id(CONFIG_EXAMPLE_SETUP_ID);
 #ifdef CONFIG_APP_WIFI_USE_WAC_PROVISIONING
-    app_hap_setup_payload(CONFIG_EXAMPLE_SETUP_CODE, CONFIG_EXAMPLE_SETUP_ID, true, cfg.cid);
+    //app_hap_setup_payload(CONFIG_EXAMPLE_SETUP_CODE, CONFIG_EXAMPLE_SETUP_ID, true, cfg.cid);
 #else
-    app_hap_setup_payload(CONFIG_EXAMPLE_SETUP_CODE, CONFIG_EXAMPLE_SETUP_ID, false, cfg.cid);
+    //app_hap_setup_payload(CONFIG_EXAMPLE_SETUP_CODE, CONFIG_EXAMPLE_SETUP_ID, false, cfg.cid);
 #endif
 #endif
 

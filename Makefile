@@ -1,12 +1,8 @@
-PROJECT_NAME := nina-fw
-
-HOMEKIT_PATH ?= $(abspath $(PWD))
-COMMON_COMPONENT_PATH ?= $(abspath $(PWD)/main/common)
+PROJECT_NAME := nina-fw-homekit
 
 EXTRA_COMPONENT_DIRS := $(PWD)/arduino
-EXTRA_COMPONENT_DIRS += $(HOMEKIT_PATH)/arduino/libraries/
-EXTRA_COMPONENT_DIRS += $(HOMEKIT_PATH)/arduino/libraries/Homekit
-#EXTRA_COMPONENT_DIRS += $(COMMON_COMPONENT_PATH)
+EXTRA_COMPONENT_DIRS += $(PWD)/arduino/libraries/
+EXTRA_COMPONENT_DIRS += $(PWD)/arduino/libraries/Homekit
 
 CPPFLAGS += -DARDUINO
 

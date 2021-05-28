@@ -55,7 +55,6 @@ menu "HAP HTTP Server"
     config HAP_HTTP_STACK_SIZE
         int "Server Stack Size"
         default 12288
-        range 8192 32768
         help
             Set the stack size for the HomeKit HTTP Server thread.
 
@@ -82,7 +81,6 @@ menu "HAP HTTP Server"
     config HAP_HTTP_MAX_URI_HANDLERS
         int "Max URI Handlers"
         default 16
-        range 12 32
         help
             Set the Maximum number of URI handlers that the HTTP Server should allow.
 

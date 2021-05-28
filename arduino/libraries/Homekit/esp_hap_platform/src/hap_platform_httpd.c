@@ -33,12 +33,10 @@ int hap_platform_httpd_start(httpd_handle_t *handle)
         .ctrl_port          = CONFIG_HAP_HTTP_CONTROL_PORT,
         .max_open_sockets   = CONFIG_HAP_HTTP_MAX_OPEN_SOCKETS,
         .max_uri_handlers   = CONFIG_HAP_HTTP_MAX_URI_HANDLERS,
-        .max_resp_headers   = 8,
-        .backlog_conn       = 5,
-        .lru_purge_enable   = true,
-        .recv_wait_timeout  = 5,
-        .send_wait_timeout  = 5,
+        .max_resp_headers   = 5,
+        .lru_purge_enable   = true,                                          
     };
+    
     esp_err_t err =  httpd_start(handle, &config);
     if (err == ESP_OK) {
         int_handle = handle;
