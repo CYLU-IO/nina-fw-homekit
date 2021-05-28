@@ -42,7 +42,6 @@ int HomekitClass::init(const char *serial, const char *name, const char *setupCo
   strncpy((char *)_acc_setupCode, setupCode, HAP_PINCODE_LENGTH);
   strncpy((char *)_acc_setupId, setupId, HAP_SETUPID_LENGTH);
 
-  hap_reset_to_factory();
   return create();
 }
 
@@ -156,7 +155,6 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
     {
       ESP_LOGI(TAG, "Received Write. Switch %s", write->val.b ? "On" : "Off");
 
-      /* TODO: Control Actual Hardware */
       for (int i = 0; i < MAX_MODULE_NUM; i++) {
         hap_char_t *m_hc = HomekitClass::modules[i].hc;
 
@@ -176,6 +174,12 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
   }
 
   return ret;
+}
+
+void HomekitClass::resetEntireSettings()
+{
+  hap_reset_to_factory();
+  hap_reset_homekit_data();
 }
 
 HomekitClass Homekit;

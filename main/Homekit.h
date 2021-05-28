@@ -54,17 +54,7 @@ public:
 
   static int switchWrite(hap_write_data_t write_data[], int count, void *serv_priv, void *write_priv);
 
-  /*void cleanModules();
-
-    void destroy();
-
-    static void* switchRead(void* arg);
-
-    static void switchWrite(void* arg, void* value, int len);
-
-    static void switchNotify(void* arg, void* ev_handle, bool enable);
-
-    char *getFwVersion();*/
+  void resetEntireSettings();
 };
 
 extern HomekitClass Homekit;

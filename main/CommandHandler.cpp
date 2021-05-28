@@ -1846,7 +1846,8 @@ int setServiceValue(const uint8_t command[], uint8_t response[])
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.setServiceValue((addr - 1), id, state);;
+  response[4] = Homekit.setServiceValue((addr - 1), id, state);
+  ;
 
   return 6;
 }
@@ -1859,6 +1860,17 @@ int getServiceTriggered(const uint8_t command[], uint8_t response[])
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
   response[4] = Homekit.readTriggered((addr - 1), id);
+
+  return 6;
+}
+
+int resetEntireSettings(const uint8_t command[], uint8_t response[])
+{
+  Homekit.resetEntireSettings();
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = 1;
 
   return 6;
 }
@@ -2008,7 +2020,7 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    resetEntireSettings,
 };
 
 #define NUM_COMMAND_HANDLERS (sizeof(commandHandlers) / sizeof(commandHandlers[0]))
