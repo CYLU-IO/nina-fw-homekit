@@ -13,8 +13,6 @@
 
 static const char *TAG = "HAP outlet";
 
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
-
 hap_acc_t *HomekitClass::_accessory;
 module_t HomekitClass::modules[MAX_MODULE_NUM];
 
@@ -26,29 +24,28 @@ static int hk_identify(hap_acc_t *ha)
 
 HomekitClass::HomekitClass()
 {
+  module_t *modules = (module_t *)malloc(MAX_MODULE_NUM * sizeof(module_t));
+}
+
+int HomekitClass::init()
+{
   memset(&_acc_serial, 0x00, sizeof(_acc_serial));
-  memset(&_acc_id, 0x00, sizeof(_acc_id));
   memset(&_acc_name, 0x00, sizeof(_acc_name));
   memset(&_acc_setupCode, 0x00, sizeof(_acc_setupCode));
   memset(&_acc_setupId, 0x00, sizeof(_acc_setupId));
 
-  module_t *modules = (module_t *)malloc(MAX_MODULE_NUM * sizeof(module_t));
+  return hap_init(HAP_TRANSPORT_WIFI);
 }
 
-int HomekitClass::init(const char *serial, const char *name, const char *setupCode, const char *setupId)
+/* Initialize the HAP core */
+int HomekitClass::create(const char *serial, const char *name, const char *setupCode, const char *setupId)
 {
+  int ret = 0;
+
   strncpy((char *)_acc_serial, serial, HK_ACC_SERIAL_MAX_LENGTH);
   strncpy((char *)_acc_name, name, HK_ACC_NAME_MAX_LENGTH);
   strncpy((char *)_acc_setupCode, setupCode, HAP_PINCODE_LENGTH);
   strncpy((char *)_acc_setupId, setupId, HAP_SETUPID_LENGTH);
-
-  return create();
-}
-
-/* Initialize the HAP core */
-int HomekitClass::create()
-{
-  int ret = hap_init(HAP_TRANSPORT_WIFI);
 
   hap_acc_cfg_t cfg = {
       .name = (char *)_acc_name,
@@ -107,12 +104,18 @@ int HomekitClass::addService(uint8_t index, uint8_t id, uint8_t state, const cha
 
 int HomekitClass::begin()
 {
+  static bool first = true;
+  int ret = HAP_SUCCESS;
   //hap_enable_mfi_auth(HAP_MFI_AUTH_HW);
+
   /* Add the Accessory to the HomeKit Database */
   hap_add_accessory(_accessory);
 
-  /* Start the HAP core */
-  int ret = hap_start();
+  if (first)
+  {
+    ret = hap_start();
+    first = false;
+  }
 
   return ret;
 }
@@ -155,10 +158,12 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
     {
       ESP_LOGI(TAG, "Received Write. Switch %s", write->val.b ? "On" : "Off");
 
-      for (int i = 0; i < MAX_MODULE_NUM; i++) {
+      for (int i = 0; i < MAX_MODULE_NUM; i++)
+      {
         hap_char_t *m_hc = HomekitClass::modules[i].hc;
 
-        if (hap_char_get_iid(m_hc) == hap_char_get_iid(write->hc)) {
+        if (hap_char_get_iid(m_hc) == hap_char_get_iid(write->hc))
+        {
           HomekitClass::modules[i].event_triggered = true;
           break;
         }
@@ -176,10 +181,16 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
   return ret;
 }
 
-void HomekitClass::resetEntireSettings()
+void HomekitClass::deleteAllAccessory()
 {
-  hap_reset_to_factory();
-  hap_reset_homekit_data();
+  if (_accessory)
+    hap_acc_delete(_accessory);
+}
+
+int HomekitClass::resetEntireSettings()
+{
+  //hap_reset_to_factory();
+  return hap_reset_homekit_data();
 }
 
 HomekitClass Homekit;

@@ -1777,6 +1777,15 @@ int getHKVersion(const uint8_t command[], uint8_t response[])
 
 int initHK(const uint8_t command[], uint8_t response[])
 {
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.init();
+
+  return 6;
+}
+
+int createHK(const uint8_t command[], uint8_t response[])
+{
   char serial[12 + 1];
   char name[32 + 1];
   char setupCode[10 + 1];
@@ -1794,8 +1803,7 @@ int initHK(const uint8_t command[], uint8_t response[])
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.init(serial, name, setupCode, setupId);
-  ;
+  response[4] = Homekit.create(serial, name, setupCode, setupId);
 
   return 6;
 }
@@ -1864,13 +1872,22 @@ int getServiceTriggered(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int resetEntireSettings(const uint8_t command[], uint8_t response[])
+int deleteAllAccessory(const uint8_t command[], uint8_t response[])
 {
-  Homekit.resetEntireSettings();
+  Homekit.deleteAllAccessory();
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = 1;
+  response[4] = 0;
+
+  return 6;
+}
+
+int resetEntireSettings(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.resetEntireSettings();
 
   return 6;
 }
@@ -2007,6 +2024,7 @@ const CommandHandlerType commandHandlers[] = {
     // 0x70 -> 0x7f
     getHKVersion,
     initHK,
+    createHK,
     addService,
     beginHK,
     setServiceValue,
@@ -2018,8 +2036,7 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
     NULL,
     NULL,
-    NULL,
-    NULL,
+    deleteAllAccessory,
     resetEntireSettings,
 };
 
