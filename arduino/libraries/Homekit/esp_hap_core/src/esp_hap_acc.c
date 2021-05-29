@@ -82,6 +82,7 @@ static int hap_acc_info_write(hap_write_data_t write_data[], int count,
 hap_acc_t *hap_acc_create(hap_acc_cfg_t *acc_cfg)
 {
     bool first = true;
+
     int ret = 0;
     __hap_acc_t *_ha = hap_platform_memory_calloc(1, sizeof(__hap_acc_t));
     if (!_ha)
@@ -414,14 +415,14 @@ int hap_get_unique_aid(const char *id)
 void hap_add_accessory(hap_acc_t *ha)
 {
     if (!ha)
-    {
         return;
-    }
+
     /*if (primary_acc)
     {
         ESP_MFI_DEBUG(ESP_MFI_DEBUG_ERR, "Primary Accessory already added. Use hap_add_bridged_accessory() instead");
         return;
     }*/
+
     __hap_acc_t *_ha = (__hap_acc_t *)ha;
     _ha->aid = 1;
     primary_acc = _ha;

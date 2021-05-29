@@ -1788,29 +1788,23 @@ int createHK(const uint8_t command[], uint8_t response[])
 {
   char serial[12 + 1];
   char name[32 + 1];
-  char setupCode[10 + 1];
-  char setupId[4 + 1];
 
   memset(serial, 0x00, sizeof(serial));
   memset(name, 0x00, sizeof(name));
-  memset(setupCode, 0x00, sizeof(setupCode));
-  memset(setupId, 0x00, sizeof(setupId));
 
   memcpy(serial, &command[4], command[3]);
   memcpy(name, &command[5 + command[3]], command[4 + command[3]]);
-  memcpy(setupCode, &command[6 + command[3] + command[4 + command[3]]], command[5 + command[3] + command[4 + command[3]]]);
-  memcpy(setupId, &command[7 + command[3] + command[4 + command[3]] + command[5 + command[3] + command[4 + command[3]]]], command[6 + command[3] + command[4 + command[3]] + command[5 + command[3] + command[4 + command[3]]]]);
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.create(serial, name, setupCode, setupId);
+  response[4] = Homekit.create(serial, name);
 
   return 6;
 }
 
 int addService(const uint8_t command[], uint8_t response[])
 {
-  uint8_t addr = command[4];
+  uint8_t index = command[4];
   uint8_t id = command[6];
   uint8_t state = command[8];
   char name[25 + 1];
@@ -1820,7 +1814,7 @@ int addService(const uint8_t command[], uint8_t response[])
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.addService((addr - 1), id, state, name);
+  response[4] = Homekit.addService(index, id, state, name);
 
   return 6;
 }
@@ -1836,25 +1830,25 @@ int beginHK(const uint8_t command[], uint8_t response[])
 
 int getServiceValue(const uint8_t command[], uint8_t response[])
 {
-  uint8_t addr = command[4];
+  uint8_t index = command[4];
   uint8_t id = command[6];
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.getServiceValue((addr - 1), id);
+  response[4] = Homekit.getServiceValue(index, id);
 
   return 6;
 }
 
 int setServiceValue(const uint8_t command[], uint8_t response[])
 {
-  uint8_t addr = command[4];
+  uint8_t index = command[4];
   uint8_t id = command[6];
   uint8_t state = command[8];
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.setServiceValue((addr - 1), id, state);
+  response[4] = Homekit.setServiceValue(index, id, state);
   ;
 
   return 6;
@@ -1862,19 +1856,19 @@ int setServiceValue(const uint8_t command[], uint8_t response[])
 
 int getServiceTriggered(const uint8_t command[], uint8_t response[])
 {
-  uint8_t addr = command[4];
+  uint8_t index = command[4];
   uint8_t id = command[6];
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.readTriggered((addr - 1), id);
+  response[4] = Homekit.readTriggered(index, id);
 
   return 6;
 }
 
-int deleteAllAccessory(const uint8_t command[], uint8_t response[])
+int deleateAccessory(const uint8_t command[], uint8_t response[])
 {
-  Homekit.deleteAllAccessory();
+  Homekit.deleateAccessory();
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
@@ -1883,11 +1877,11 @@ int deleteAllAccessory(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int resetEntireSettings(const uint8_t command[], uint8_t response[])
+int resetToFactory(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.resetEntireSettings();
+  response[4] = Homekit.resetToFactory();
 
   return 6;
 }
@@ -2036,8 +2030,8 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
     NULL,
     NULL,
-    deleteAllAccessory,
-    resetEntireSettings,
+    deleateAccessory,
+    resetToFactory,
 };
 
 #define NUM_COMMAND_HANDLERS (sizeof(commandHandlers) / sizeof(commandHandlers[0]))

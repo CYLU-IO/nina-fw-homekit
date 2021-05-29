@@ -50,12 +50,6 @@ int hap_platform_httpd_stop(httpd_handle_t *handle)
     if (err == ESP_OK) {
         int_handle = NULL;
     }
-    
-    if (err == ESP_ERR_INVALID_ARG) return 9;
-    if (err == ESP_ERR_HTTPD_ALLOC_MEM) return 8;
-    if (err == ESP_ERR_HTTPD_TASK) return 7;
-    if (err == ESP_FAIL) return 6;
-
     return err;
 }
 

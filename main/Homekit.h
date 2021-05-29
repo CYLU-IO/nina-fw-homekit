@@ -8,8 +8,6 @@
 
 #define HK_ACC_SERIAL_MAX_LENGTH 12
 #define HK_ACC_NAME_MAX_LENGTH 32
-#define HAP_PINCODE_LENGTH 10
-#define HAP_SETUPID_LENGTH 4
 
 typedef struct
 {
@@ -25,8 +23,6 @@ class HomekitClass
 private:
   char _acc_serial[HK_ACC_SERIAL_MAX_LENGTH + 1];
   char _acc_name[HK_ACC_NAME_MAX_LENGTH + 1];
-  char _acc_setupCode[HAP_PINCODE_LENGTH + 1];
-  char _acc_setupId[HAP_SETUPID_LENGTH + 1];
   int num_modules;
 
 public:
@@ -37,7 +33,7 @@ public:
 
   int init();
 
-  int create(const char *serial, const char *name, const char *setupCode, const char *setupId);
+  int create(const char *serial, const char *name);
 
   int addService(uint8_t index, uint8_t id, uint8_t state, const char *name);
 
@@ -51,9 +47,9 @@ public:
 
   static int switchWrite(hap_write_data_t write_data[], int count, void *serv_priv, void *write_priv);
 
-  void deleteAllAccessory();
+  void deleateAccessory();
 
-  int resetEntireSettings();
+  int resetToFactory();
 };
 
 extern HomekitClass Homekit;

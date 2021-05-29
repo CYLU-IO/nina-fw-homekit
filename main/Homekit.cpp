@@ -31,21 +31,19 @@ int HomekitClass::init()
 {
   memset(&_acc_serial, 0x00, sizeof(_acc_serial));
   memset(&_acc_name, 0x00, sizeof(_acc_name));
-  memset(&_acc_setupCode, 0x00, sizeof(_acc_setupCode));
-  memset(&_acc_setupId, 0x00, sizeof(_acc_setupId));
+
+  hap_set_debug_level(HAP_DEBUG_LEVEL_ERR);
 
   return hap_init(HAP_TRANSPORT_WIFI);
 }
 
 /* Initialize the HAP core */
-int HomekitClass::create(const char *serial, const char *name, const char *setupCode, const char *setupId)
+int HomekitClass::create(const char *serial, const char *name)
 {
   int ret = 0;
 
   strncpy((char *)_acc_serial, serial, HK_ACC_SERIAL_MAX_LENGTH);
   strncpy((char *)_acc_name, name, HK_ACC_NAME_MAX_LENGTH);
-  strncpy((char *)_acc_setupCode, setupCode, HAP_PINCODE_LENGTH);
-  strncpy((char *)_acc_setupId, setupId, HAP_SETUPID_LENGTH);
 
   hap_acc_cfg_t cfg = {
       .name = (char *)_acc_name,
@@ -61,13 +59,18 @@ int HomekitClass::create(const char *serial, const char *name, const char *setup
   /* Create accessory object */
   _accessory = hap_acc_create(&cfg);
 
-  /* Add a dummy Product Data */
-  //uint8_t product_data[] = {'E', 'S', 'P', '3', '2', 'H', 'A', 'P'};
-  //hap_acc_add_product_data(_accessory, product_data, sizeof(product_data));
+  if (!_accessory)
+    return HAP_FAIL;
 
-  /* Set advertisement Info */
-  hap_set_setup_code((char *)_acc_setupCode);
-  hap_set_setup_id((char *)_acc_setupId);
+/* Set hardcoded accessory code, later shoule be define in factory_nvs */
+#ifdef CONFIG_EXAMPLE_USE_HARDCODED_SETUP_CODE
+        hap_set_setup_code(CONFIG_EXAMPLE_SETUP_CODE);
+  ret = hap_set_setup_id(CONFIG_EXAMPLE_SETUP_ID);
+#else
+           char setup_code[11] = {0};
+  size_t setup_code_size = sizeof(setup_code);
+  ret = hap_factory_keystore_get("hap_setup", "setup_code", (uint8_t *)setup_code, &setup_code_size);
+#endif
 
   return ret;
 }
@@ -181,16 +184,14 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
   return ret;
 }
 
-void HomekitClass::deleteAllAccessory()
+void HomekitClass::deleateAccessory()
 {
-  if (_accessory)
-    hap_acc_delete(_accessory);
+  hap_acc_delete(_accessory);
 }
 
-int HomekitClass::resetEntireSettings()
+int HomekitClass::resetToFactory()
 {
-  //hap_reset_to_factory();
-  return hap_reset_homekit_data();
+  return hap_reset_to_factory();
 }
 
 HomekitClass Homekit;

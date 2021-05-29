@@ -347,7 +347,7 @@ int hap_start(void)
     {
         ESP_MFI_DEBUG(ESP_MFI_DEBUG_ERR, "HTTPD START Failed [%d]", ret);
         //return ret;
-        return ret;
+        return 7;
     }
 
     ret = hap_event_queue_init();
