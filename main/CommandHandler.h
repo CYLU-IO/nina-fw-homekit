@@ -33,12 +33,6 @@ private:
   static void gpio0Updater(void*);
   void updateGpio0Pin();
 
-  static void onWiFiReceive();
-  void handleWiFiReceive();
-
-  static void onWiFiDisconnect();
-  void handleWiFiDisconnect();
-
 private:
   SemaphoreHandle_t _updateGpio0PinSemaphore;
 };
