@@ -11,49 +11,7 @@
 #include <hap_apple_servs.h>
 #include <hap_apple_chars.h>
 
-//For Wifi
-#include <WiFi.h>
-#include <esp_wifi.h>
-#include <esp_wpa2.h>
-#include <tcpip_adapter.h>
-
-#include <lwip/apps/sntp.h>
-#include <lwip/dns.h>
-#include <lwip/netdb.h>
-#include <lwip/raw.h>
-#include <lwip/icmp.h>
-#include <lwip/sockets.h>
-#include <lwip/ip_addr.h>
-#include <lwip/inet_chksum.h>
-
-static const char *TAG = "HAP outlet";
-
-static const int WIFI_CONNECTED_EVENT = BIT0;
-static EventGroupHandle_t wifi_event_group;
-
-static esp_err_t event_handler(void *ctx, system_event_t *event)
-{
-  switch (event->event_id)
-  {
-  case SYSTEM_EVENT_STA_START:
-    esp_wifi_connect();
-    break;
-  case SYSTEM_EVENT_STA_GOT_IP:
-    printf("Wifi Connected");
-    printf("IP: %s \n", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
-    xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_EVENT);
-    break;
-  case SYSTEM_EVENT_STA_DISCONNECTED:
-  {
-    esp_wifi_connect();
-    xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_EVENT);
-    break;
-  }
-  default:
-    break;
-  }
-  return ESP_OK;
-}
+static const char *TAG = "Homekit";
 
 hap_acc_t *HomekitClass::_accessory;
 module_t HomekitClass::modules[MAX_MODULE_NUM];
@@ -75,32 +33,6 @@ int HomekitClass::init()
   memset(&_acc_name, 0x00, sizeof(_acc_name));
 
   hap_set_debug_level(HAP_DEBUG_LEVEL_ERR);
-
-  /* Initialize TCP/IP */
-  tcpip_adapter_init();
-  esp_event_loop_init(event_handler, NULL);
-
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  esp_wifi_init(&cfg);
-
-  esp_event_loop_create_default();
-  wifi_event_group = xEventGroupCreate();
-
-  wifi_config_t wifi_config = {
-      .sta = {
-          {.ssid = "Edwin's Room"},
-          {.password = "Edw23190"},
-      },
-  };
-
-  wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-
-  esp_wifi_set_mode(WIFI_MODE_STA);
-  esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
-
-  xEventGroupClearBits(wifi_event_group, BIT0);
-  esp_wifi_start();
-  xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_EVENT, false, true, portMAX_DELAY);
 
   return hap_init(HAP_TRANSPORT_WIFI);
 }
@@ -259,6 +191,7 @@ void HomekitClass::deleateAccessory()
 
 int HomekitClass::resetToFactory()
 {
+  hap_reset_homekit_data();
   return hap_reset_to_factory();
 }
 

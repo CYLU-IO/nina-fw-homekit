@@ -21,7 +21,8 @@ extern "C" {
 #include <string.h>
 
 #include <driver/gpio.h>
-#include <esp_intr.h>
+#include <esp_intr_alloc.h>
+#include "freertos/xtensa_api.h"
 #include <rom/ets_sys.h>
 #include <soc/gpio_sig_map.h>
 }
