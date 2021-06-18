@@ -18,7 +18,6 @@ module_t HomekitClass::modules[MAX_MODULE_NUM];
 
 static int hk_identify(hap_acc_t *ha)
 {
-  ESP_LOGI(TAG, "Accessory identified");
   return HAP_SUCCESS;
 }
 
@@ -32,7 +31,7 @@ int HomekitClass::init()
   memset(&_acc_serial, 0x00, sizeof(_acc_serial));
   memset(&_acc_name, 0x00, sizeof(_acc_name));
 
-  hap_set_debug_level(HAP_DEBUG_LEVEL_ERR);
+  hap_set_debug_level(HAP_DEBUG_LEVEL_INFO);
 
   return hap_init(HAP_TRANSPORT_WIFI);
 }
@@ -191,7 +190,6 @@ void HomekitClass::deleateAccessory()
 
 int HomekitClass::resetToFactory()
 {
-  hap_reset_homekit_data();
   return hap_reset_to_factory();
 }
 

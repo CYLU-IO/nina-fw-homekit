@@ -22,11 +22,23 @@ static const int ESPTOUCH_DONE_BIT = BIT1;
 void smarconfig_task(void *parm);
 
 void smartconfig_event_handler(void *arg, esp_event_base_t event_base,
-                          int32_t event_id, void *event_data)
+                               int32_t event_id, void *event_data)
 {
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
   {
-    xTaskCreate(smarconfig_task, "smarconfig_task", 4096, NULL, 3, NULL);
+    wifi_config_t wifi_config;
+    esp_wifi_get_config((wifi_interface_t)WIFI_IF_STA, &wifi_config);
+
+    if (strlen((const char *)wifi_config.sta.ssid))
+    {
+      ESP_ERROR_CHECK(esp_wifi_disconnect());
+      ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+      ESP_ERROR_CHECK(esp_wifi_connect());
+    }
+    else
+    {
+      xTaskCreate(smarconfig_task, "smarconfig_task", 4096, NULL, 3, NULL);
+    }
   }
   else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
   {
@@ -36,7 +48,9 @@ void smartconfig_event_handler(void *arg, esp_event_base_t event_base,
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
   {
     xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
-  } else if (event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD) {
+  }
+  else if (event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD)
+  {
 
     smartconfig_event_got_ssid_pswd_t *evt = (smartconfig_event_got_ssid_pswd_t *)event_data;
     wifi_config_t wifi_config;
@@ -64,8 +78,7 @@ void smartconfig_event_handler(void *arg, esp_event_base_t event_base,
 
     ESP_ERROR_CHECK(esp_wifi_disconnect());
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-
-    esp_wifi_connect();
+    ESP_ERROR_CHECK(esp_wifi_connect());
   }
   else if (event_base == SC_EVENT && event_id == SC_EVENT_SEND_ACK_DONE)
   {
@@ -96,6 +109,7 @@ void smarconfig_task(void *parm)
 {
   EventBits_t uxBits;
   ESP_ERROR_CHECK(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH));
+
   smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_smartconfig_start(&cfg));
 

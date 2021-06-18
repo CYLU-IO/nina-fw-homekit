@@ -27,6 +27,7 @@
 #include <freertos/task.h>
 #include <freertos/queue.h>
 #include <esp_event.h>
+#include <nvs_flash.h>
 #include <esp_wifi.h>
 
 #include <esp_mfi_debug.h>
@@ -104,6 +105,9 @@ static void hap_common_sm(hap_internal_event_t event)
         vTaskDelay(1000 / hap_platform_os_get_msec_per_tick());
         hap_close_all_sessions();
         hap_mdns_deannounce();
+        hap_erase_accessory_info();
+        hap_erase_network_info();
+        hap_erase_controller_info();
         hap_keystore_erase_all_data();
         reboot_reason = HAP_REBOOT_REASON_RESET_TO_FACTORY;
         break;
