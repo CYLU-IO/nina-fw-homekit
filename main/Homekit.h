@@ -33,21 +33,23 @@ public:
 
   int init();
 
-  int create(const char *serial, const char *name);
+  int createAccessory(const char *serial, const char *name);
+
+  int countAccessory();
+
+  int beginAccessory();
+
+  int deleteAccessory();
 
   int addService(uint8_t index, uint8_t id, uint8_t state, const char *name);
 
-  int begin();
+  int setServiceValue(uint8_t index, uint8_t id, uint8_t state);
 
   int getServiceValue(uint8_t index, uint8_t id);
 
-  int setServiceValue(uint8_t index, uint8_t id, uint8_t state);
-
-  int readTriggered(uint8_t index, uint8_t id);
+  int readServiceTriggered(uint8_t index, uint8_t id);
 
   static int switchWrite(hap_write_data_t write_data[], int count, void *serv_priv, void *write_priv);
-
-  void deleateAccessory();
 
   int resetToFactory();
 };

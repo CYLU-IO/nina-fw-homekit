@@ -2,9 +2,26 @@
 #include "esp_log.h"
 
 #include "CommandHandler.h"
+#include "WifiManager.h"
 #include "Homekit.h"
 
-const char FIRMWARE_VERSION[6] = "1.4.5";
+int wifimgr_getStatus(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = WifiMgr.getStatus();
+
+  return 6;
+}
+
+int resetToFactory(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.resetToFactory();
+
+  return 6;
+}
 
 int setPinMode(const uint8_t command[], uint8_t response[])
 {
@@ -398,7 +415,7 @@ ota_cleanup:
 }
 
 /*** HOMEKIT ***/
-int getHKVersion(const uint8_t command[], uint8_t response[])
+int homekit_getVersion(const uint8_t command[], uint8_t response[])
 {
   const char *res = "1.0.0";
   uint8_t resLen = strlen(res);
@@ -411,7 +428,7 @@ int getHKVersion(const uint8_t command[], uint8_t response[])
   return (5 + resLen);
 }
 
-int initHK(const uint8_t command[], uint8_t response[])
+int homekit_init(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
@@ -420,7 +437,7 @@ int initHK(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int createHK(const uint8_t command[], uint8_t response[])
+int homekit_createAccessory(const uint8_t command[], uint8_t response[])
 {
   char serial[12 + 1];
   char name[32 + 1];
@@ -433,12 +450,39 @@ int createHK(const uint8_t command[], uint8_t response[])
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.create(serial, name);
+  response[4] = Homekit.createAccessory(serial, name);
 
   return 6;
 }
 
-int addService(const uint8_t command[], uint8_t response[])
+int homekit_countAccessory(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.countAccessory();
+
+  return 6;
+}
+
+int homekit_beginAccessory(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.beginAccessory();
+
+  return 6;
+}
+
+int homekit_deleteAccessory(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.deleteAccessory();
+
+  return 6;
+}
+
+int homekit_addService(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
   uint8_t id = command[6];
@@ -455,16 +499,7 @@ int addService(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int beginHK(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.begin();
-
-  return 6;
-}
-
-int getServiceValue(const uint8_t command[], uint8_t response[])
+int homekit_getServiceValue(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
   uint8_t id = command[6];
@@ -476,7 +511,7 @@ int getServiceValue(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int setServiceValue(const uint8_t command[], uint8_t response[])
+int homekit_setServiceValue(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
   uint8_t id = command[6];
@@ -490,34 +525,14 @@ int setServiceValue(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int getServiceTriggered(const uint8_t command[], uint8_t response[])
+int homekit_readServiceTriggered(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
   uint8_t id = command[6];
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.readTriggered(index, id);
-
-  return 6;
-}
-
-int deleateAccessory(const uint8_t command[], uint8_t response[])
-{
-  Homekit.deleateAccessory();
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = 0;
-
-  return 6;
-}
-
-int resetToFactory(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.resetToFactory();
+  response[4] = Homekit.readServiceTriggered(index, id);
 
   return 6;
 }
@@ -545,6 +560,7 @@ const CommandHandlerType commandHandlers[] = {
 
     // 0x10 -> 0x1f
     NULL,
+    wifimgr_getStatus,
     NULL,
     NULL,
     NULL,
@@ -558,20 +574,19 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
     NULL,
     NULL,
-    NULL,
-    NULL,
+    resetToFactory,
 
     // 0x20 -> 0x2f
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    homekit_getVersion,
+    homekit_init,
+    homekit_createAccessory,
+    homekit_countAccessory,
+    homekit_beginAccessory,
+    homekit_deleteAccessory,
+    homekit_addService,
+    homekit_setServiceValue,
+    homekit_getServiceValue,
+    homekit_readServiceTriggered,
     NULL,
     NULL,
     NULL,
@@ -650,24 +665,6 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
     NULL,
     NULL,
-
-    // 0x70 -> 0x7f
-    getHKVersion,
-    initHK,
-    createHK,
-    addService,
-    beginHK,
-    setServiceValue,
-    getServiceValue,
-    getServiceTriggered,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    deleateAccessory,
-    resetToFactory,
 };
 
 #define NUM_COMMAND_HANDLERS (sizeof(commandHandlers) / sizeof(commandHandlers[0]))

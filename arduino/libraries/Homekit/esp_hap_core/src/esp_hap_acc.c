@@ -529,6 +529,24 @@ void hap_delete_all_accessories(void)
 }
 
 /**
+ * @brief Count accessories
+ */
+int hap_count_accessories(void)
+{
+    int c = 0;
+    __hap_acc_t *next, *ha = primary_acc;
+
+    while (ha)
+    {
+        next = ha->next;
+        c++;
+        ha = next;
+    }
+
+    return c;
+}
+
+/**
  * @brief get target accessory by AID
  */
 hap_acc_t *hap_acc_get_by_aid(int32_t aid)

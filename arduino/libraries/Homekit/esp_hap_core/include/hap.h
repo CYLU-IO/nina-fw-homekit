@@ -539,6 +539,11 @@ void hap_acc_delete(hap_acc_t *ha);
 void hap_delete_all_accessories(void);
 
 /**
+ * @brief Count accessories
+ */
+int hap_count_accessories(void);
+
+/**
  * Get unique AID for the given identifier
  *
  * This API can be used to ensure that the same AID gets assigned to an accessory

@@ -17,8 +17,8 @@ extern "C"
 #include <SPIS.h>
 
 #include "CommandHandler.h"
+#include "WifiManager.h"
 #include "Homekit.h"
-#include "Smartconfig.h"
 
 #define SPI_BUFFER_LEN SPI_MAX_DMA_LEN
 
@@ -43,8 +43,7 @@ void setup()
   setupSPI();
 
   Homekit.init();
-  
-  smartconfigStart();
+  WifiMgr.begin();
 }
 
 void setupWiFi()

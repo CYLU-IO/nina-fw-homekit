@@ -37,7 +37,7 @@ int HomekitClass::init()
 }
 
 /* Initialize the HAP core */
-int HomekitClass::create(const char *serial, const char *name)
+int HomekitClass::createAccessory(const char *serial, const char *name)
 {
   int ret = 0;
 
@@ -74,6 +74,35 @@ int HomekitClass::create(const char *serial, const char *name)
   return ret;
 }
 
+int HomekitClass::countAccessory()
+{
+  return hap_count_accessories();
+}
+
+int HomekitClass::beginAccessory()
+{
+  static bool first = true;
+  int ret = HAP_SUCCESS;
+
+  hap_add_accessory(_accessory);
+
+  if (first)
+  {
+    
+    ret = hap_start();
+    first = false;
+  }
+
+  return ret;
+}
+
+int HomekitClass::deleteAccessory()
+{
+  hap_acc_delete(_accessory);
+
+  return 0;
+}
+
 /* Create the Switch Service */
 int HomekitClass::addService(uint8_t index, uint8_t id, uint8_t state, const char *name)
 {
@@ -104,31 +133,6 @@ int HomekitClass::addService(uint8_t index, uint8_t id, uint8_t state, const cha
   return ret;
 }
 
-int HomekitClass::begin()
-{
-  static bool first = true;
-  int ret = HAP_SUCCESS;
-  //hap_enable_mfi_auth(HAP_MFI_AUTH_HW);
-
-  /* Add the Accessory to the HomeKit Database */
-  hap_add_accessory(_accessory);
-
-  if (first)
-  {
-    ret = hap_start();
-    first = false;
-  }
-
-  return ret;
-}
-
-int HomekitClass::getServiceValue(uint8_t index, uint8_t id)
-{
-  const hap_val_t *cur_val = hap_char_get_val((hap_char_t *)modules[index].hc);
-
-  return cur_val->i;
-}
-
 int HomekitClass::setServiceValue(uint8_t index, uint8_t id, uint8_t state)
 {
   hap_char_t *hc = modules[index].hc;
@@ -139,7 +143,14 @@ int HomekitClass::setServiceValue(uint8_t index, uint8_t id, uint8_t state)
   return hap_char_update_val(hc, &appliance_value);
 }
 
-int HomekitClass::readTriggered(uint8_t index, uint8_t id)
+int HomekitClass::getServiceValue(uint8_t index, uint8_t id)
+{
+  const hap_val_t *cur_val = hap_char_get_val((hap_char_t *)modules[index].hc);
+
+  return cur_val->i;
+}
+
+int HomekitClass::readServiceTriggered(uint8_t index, uint8_t id)
 {
   bool b = modules[index].event_triggered;
   modules[index].event_triggered = false; //clean after response
@@ -181,11 +192,6 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
   }
 
   return ret;
-}
-
-void HomekitClass::deleateAccessory()
-{
-  hap_acc_delete(_accessory);
 }
 
 int HomekitClass::resetToFactory()

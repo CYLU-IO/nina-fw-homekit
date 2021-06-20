@@ -26,7 +26,13 @@
     "array": "cpp",
     "utility": "cpp",
     "queue": "cpp",
-    "stack": "cpp"
+    "stack": "cpp",
+    "__hash_table": "cpp",
+    "__split_buffer": "cpp",
+    "initializer_list": "cpp",
+    "string": "cpp",
+    "string_view": "cpp",
+    "unordered_map": "cpp"
   },
   "python.pythonPath": "/usr/local/bin/python3"
 }
