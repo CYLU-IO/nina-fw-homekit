@@ -5,6 +5,9 @@
 #include "WifiManager.h"
 #include "Homekit.h"
 
+#include <nvs_flash.h>
+#include <esp_wifi.h>
+
 int wifimgr_getStatus(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
@@ -14,11 +17,26 @@ int wifimgr_getStatus(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
+int resetNetwork(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = 1;
+
+  esp_wifi_restore();
+  esp_restart();
+
+  return 6;
+}
+
 int resetToFactory(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.resetToFactory();
+  response[4] = 1;
+
+  nvs_flash_erase();
+  esp_restart();
 
   return 6;
 }
@@ -573,7 +591,7 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    resetNetwork,
     resetToFactory,
 
     // 0x20 -> 0x2f

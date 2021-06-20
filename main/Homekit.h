@@ -50,8 +50,6 @@ public:
   int readServiceTriggered(uint8_t index, uint8_t id);
 
   static int switchWrite(hap_write_data_t write_data[], int count, void *serv_priv, void *write_priv);
-
-  int resetToFactory();
 };
 
 extern HomekitClass Homekit;

@@ -30,16 +30,6 @@ void setupWiFi();
 
 void setup()
 {
-  pinMode(15, INPUT);
-  pinMode(21, INPUT);
-
-#if defined(NANO_RP2040_CONNECT)
-  pinMode(26, OUTPUT);
-  pinMode(27, OUTPUT);
-  digitalWrite(26, HIGH);
-  digitalWrite(27, HIGH);
-#endif
-
   setupSPI();
 
   Homekit.init();

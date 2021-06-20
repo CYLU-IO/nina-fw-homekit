@@ -194,9 +194,4 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
   return ret;
 }
 
-int HomekitClass::resetToFactory()
-{
-  return hap_reset_to_factory();
-}
-
 HomekitClass Homekit;
