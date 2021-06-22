@@ -26,7 +26,7 @@ uint8_t *commandBuffer;
 uint8_t *responseBuffer;
 
 void setupSPI();
-void setupWiFi();
+void setupSpiffs();
 
 void setup()
 {
@@ -36,7 +36,7 @@ void setup()
   WifiMgr.begin();
 }
 
-void setupWiFi()
+void setupSpiffs()
 {
   esp_vfs_spiffs_conf_t conf = {
       .base_path = "/fs",

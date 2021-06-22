@@ -8,6 +8,15 @@
 #include <nvs_flash.h>
 #include <esp_wifi.h>
 
+int corebridge_getFreeHeap(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = esp_get_free_heap_size();
+
+  return 6;
+}
+
 int wifimgr_getStatus(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
@@ -23,8 +32,7 @@ int resetNetwork(const uint8_t command[], uint8_t response[])
   response[3] = 1; // parameter 1 length
   response[4] = 1;
 
-  esp_wifi_restore();
-  esp_restart();
+  WifiMgr.resetNetwork();
 
   return 6;
 }
@@ -37,6 +45,129 @@ int resetToFactory(const uint8_t command[], uint8_t response[])
 
   nvs_flash_erase();
   esp_restart();
+
+  return 6;
+}
+
+/*** HOMEKIT ***/
+int homekit_getVersion(const uint8_t command[], uint8_t response[])
+{
+  const char *res = "1.0.0";
+  uint8_t resLen = strlen(res);
+
+  response[2] = 1;      // number of parameters
+  response[3] = resLen; // parameter 1 length
+
+  memcpy(&response[4], res, resLen);
+
+  return (5 + resLen);
+}
+
+int homekit_init(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.init();
+
+  return 6;
+}
+
+int homekit_createAccessory(const uint8_t command[], uint8_t response[])
+{
+  char serial[12 + 1];
+  char name[32 + 1];
+
+  memset(serial, 0x00, sizeof(serial));
+  memset(name, 0x00, sizeof(name));
+
+  memcpy(serial, &command[4], command[3]);
+  memcpy(name, &command[5 + command[3]], command[4 + command[3]]);
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.createAccessory(serial, name);
+
+  return 6;
+}
+
+int homekit_countAccessory(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.countAccessory();
+
+  return 6;
+}
+
+int homekit_beginAccessory(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.beginAccessory();
+
+  return 6;
+}
+
+int homekit_deleteAccessory(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.deleteAccessory();
+
+  return 6;
+}
+
+int homekit_addService(const uint8_t command[], uint8_t response[])
+{
+  uint8_t index = command[4];
+  uint8_t id = command[6];
+  uint8_t state = command[8];
+  char name[25 + 1];
+
+  memset(name, 0x00, sizeof(name));
+  memcpy(name, &command[10], command[9]);
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.addService(index, id, state, name);
+
+  return 6;
+}
+
+int homekit_getServiceValue(const uint8_t command[], uint8_t response[])
+{
+  uint8_t index = command[4];
+  uint8_t id = command[6];
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.getServiceValue(index, id);
+
+  return 6;
+}
+
+int homekit_setServiceValue(const uint8_t command[], uint8_t response[])
+{
+  uint8_t index = command[4];
+  uint8_t id = command[6];
+  uint8_t state = command[8];
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.setServiceValue(index, id, state);
+  ;
+
+  return 6;
+}
+
+int homekit_readServiceTriggered(const uint8_t command[], uint8_t response[])
+{
+  uint8_t index = command[4];
+  uint8_t id = command[6];
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = Homekit.readServiceTriggered(index, id);
 
   return 6;
 }
@@ -432,129 +563,6 @@ ota_cleanup:
   return 6;
 }
 
-/*** HOMEKIT ***/
-int homekit_getVersion(const uint8_t command[], uint8_t response[])
-{
-  const char *res = "1.0.0";
-  uint8_t resLen = strlen(res);
-
-  response[2] = 1;      // number of parameters
-  response[3] = resLen; // parameter 1 length
-
-  memcpy(&response[4], res, resLen);
-
-  return (5 + resLen);
-}
-
-int homekit_init(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.init();
-
-  return 6;
-}
-
-int homekit_createAccessory(const uint8_t command[], uint8_t response[])
-{
-  char serial[12 + 1];
-  char name[32 + 1];
-
-  memset(serial, 0x00, sizeof(serial));
-  memset(name, 0x00, sizeof(name));
-
-  memcpy(serial, &command[4], command[3]);
-  memcpy(name, &command[5 + command[3]], command[4 + command[3]]);
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.createAccessory(serial, name);
-
-  return 6;
-}
-
-int homekit_countAccessory(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.countAccessory();
-
-  return 6;
-}
-
-int homekit_beginAccessory(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.beginAccessory();
-
-  return 6;
-}
-
-int homekit_deleteAccessory(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.deleteAccessory();
-
-  return 6;
-}
-
-int homekit_addService(const uint8_t command[], uint8_t response[])
-{
-  uint8_t index = command[4];
-  uint8_t id = command[6];
-  uint8_t state = command[8];
-  char name[25 + 1];
-
-  memset(name, 0x00, sizeof(name));
-  memcpy(name, &command[10], command[9]);
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.addService(index, id, state, name);
-
-  return 6;
-}
-
-int homekit_getServiceValue(const uint8_t command[], uint8_t response[])
-{
-  uint8_t index = command[4];
-  uint8_t id = command[6];
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.getServiceValue(index, id);
-
-  return 6;
-}
-
-int homekit_setServiceValue(const uint8_t command[], uint8_t response[])
-{
-  uint8_t index = command[4];
-  uint8_t id = command[6];
-  uint8_t state = command[8];
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.setServiceValue(index, id, state);
-  ;
-
-  return 6;
-}
-
-int homekit_readServiceTriggered(const uint8_t command[], uint8_t response[])
-{
-  uint8_t index = command[4];
-  uint8_t id = command[6];
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.readServiceTriggered(index, id);
-
-  return 6;
-}
-
 typedef int (*CommandHandlerType)(const uint8_t command[], uint8_t response[]);
 
 const CommandHandlerType commandHandlers[] = {
@@ -574,7 +582,7 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    corebridge_getFreeHeap,
 
     // 0x10 -> 0x1f
     NULL,
@@ -699,7 +707,7 @@ void CommandHandlerClass::begin()
 
   _updateGpio0PinSemaphore = xSemaphoreCreateCounting(2, 0);
 
-  xTaskCreatePinnedToCore(CommandHandlerClass::gpio0Updater, "gpio0Updater", 8192, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(CommandHandlerClass::gpio0Updater, "gpio0Updater", 4096, NULL, 1, NULL, 1);
 }
 
 #define UDIV_UP(a, b) (((a) + (b)-1) / (b))

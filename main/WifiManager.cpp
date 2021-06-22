@@ -13,6 +13,7 @@
 #include "esp_smartconfig.h"
 
 #include "WifiManager.h"
+#include "MqttCtrl.h"
 
 static EventGroupHandle_t s_wifi_event_group;
 
@@ -67,6 +68,8 @@ void wifimgr_event_handler(void *arg, esp_event_base_t event_base,
   {
     s_retry_num = 0;
     s_wifi_status = WL_CONNECTED;
+
+    //MqttCtrl.begin();
 
     xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
   }
@@ -159,5 +162,12 @@ int WifiManager::getStatus()
 {
   return s_wifi_status;
 }
+
+void WifiManager::resetNetwork()
+{
+  esp_wifi_restore();
+  esp_restart();
+}
+
 
 WifiManager WifiMgr;

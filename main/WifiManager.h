@@ -19,6 +19,8 @@ public:
   void begin();
   
   int getStatus();
+
+  void resetNetwork();
 };
 
 extern WifiManager WifiMgr;
