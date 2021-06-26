@@ -11,7 +11,6 @@
 
 typedef struct
 {
-  uint8_t id;
   char *name;
   hap_serv_t *hs;
   hap_char_t *hc;
@@ -41,13 +40,13 @@ public:
 
   int deleteAccessory();
 
-  int addService(uint8_t index, uint8_t id, uint8_t state, const char *name);
+  int addService(uint8_t index, uint8_t state, const char *name);
 
-  int setServiceValue(uint8_t index, uint8_t id, uint8_t state);
+  int setServiceValue(uint8_t index, uint8_t state);
 
-  int getServiceValue(uint8_t index, uint8_t id);
+  int getServiceValue(uint8_t index);
 
-  int readServiceTriggered(uint8_t index, uint8_t id);
+  int readServiceTriggered(uint8_t index);
 
   static int switchWrite(hap_write_data_t write_data[], int count, void *serv_priv, void *write_priv);
 };

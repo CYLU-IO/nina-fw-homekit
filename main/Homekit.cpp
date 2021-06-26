@@ -104,7 +104,7 @@ int HomekitClass::deleteAccessory()
 }
 
 /* Create the Switch Service */
-int HomekitClass::addService(uint8_t index, uint8_t id, uint8_t state, const char *name)
+int HomekitClass::addService(uint8_t index, uint8_t state, const char *name)
 {
   hap_serv_t *service;
 
@@ -121,7 +121,6 @@ int HomekitClass::addService(uint8_t index, uint8_t id, uint8_t state, const cha
   int ret = hap_acc_add_serv(_accessory, service);
 
   module_t module = {
-      .id = id,
       .name = (char *)name,
       .hs = service,
       .hc = characteristic,
@@ -133,7 +132,7 @@ int HomekitClass::addService(uint8_t index, uint8_t id, uint8_t state, const cha
   return ret;
 }
 
-int HomekitClass::setServiceValue(uint8_t index, uint8_t id, uint8_t state)
+int HomekitClass::setServiceValue(uint8_t index, uint8_t state)
 {
   hap_char_t *hc = modules[index].hc;
   hap_val_t appliance_value = {
@@ -143,14 +142,14 @@ int HomekitClass::setServiceValue(uint8_t index, uint8_t id, uint8_t state)
   return hap_char_update_val(hc, &appliance_value);
 }
 
-int HomekitClass::getServiceValue(uint8_t index, uint8_t id)
+int HomekitClass::getServiceValue(uint8_t index)
 {
   const hap_val_t *cur_val = hap_char_get_val((hap_char_t *)modules[index].hc);
 
   return cur_val->i;
 }
 
-int HomekitClass::readServiceTriggered(uint8_t index, uint8_t id)
+int HomekitClass::readServiceTriggered(uint8_t index)
 {
   bool b = modules[index].event_triggered;
   modules[index].event_triggered = false; //clean after response

@@ -120,16 +120,15 @@ int homekit_deleteAccessory(const uint8_t command[], uint8_t response[])
 int homekit_addService(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
-  uint8_t id = command[6];
-  uint8_t state = command[8];
+  uint8_t state = command[6];
   char name[25 + 1];
 
   memset(name, 0x00, sizeof(name));
-  memcpy(name, &command[10], command[9]);
+  memcpy(name, &command[8], command[7]);
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.addService(index, id, state, name);
+  response[4] = Homekit.addService(index, state, name);
 
   return 6;
 }
@@ -137,11 +136,10 @@ int homekit_addService(const uint8_t command[], uint8_t response[])
 int homekit_getServiceValue(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
-  uint8_t id = command[6];
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.getServiceValue(index, id);
+  response[4] = Homekit.getServiceValue(index);
 
   return 6;
 }
@@ -149,12 +147,11 @@ int homekit_getServiceValue(const uint8_t command[], uint8_t response[])
 int homekit_setServiceValue(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
-  uint8_t id = command[6];
-  uint8_t state = command[8];
+  uint8_t state = command[6];
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.setServiceValue(index, id, state);
+  response[4] = Homekit.setServiceValue(index, state);
   ;
 
   return 6;
@@ -163,11 +160,10 @@ int homekit_setServiceValue(const uint8_t command[], uint8_t response[])
 int homekit_readServiceTriggered(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
-  uint8_t id = command[6];
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.readServiceTriggered(index, id);
+  response[4] = Homekit.readServiceTriggered(index);
 
   return 6;
 }

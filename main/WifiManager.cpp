@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
@@ -42,6 +43,7 @@ void wifimgr_event_handler(void *arg, esp_event_base_t event_base,
     }
     else
     {
+      printf("[WifiMgr] Begin provision\n");
       xTaskCreate(smarconfig_task, "smarconfig_task", 4096, NULL, 3, NULL);
     }
   }
@@ -154,6 +156,8 @@ void WifiManager::begin()
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_start());
+
+  printf("[WifiMgr] Wifi Starts\n");
 
   s_wifi_status = WL_IDLE_STATUS;
 }
