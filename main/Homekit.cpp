@@ -15,6 +15,7 @@ static const char *TAG = "Homekit";
 
 hap_acc_t *HomekitClass::_accessory;
 module_t HomekitClass::modules[MAX_MODULE_NUM];
+int HomekitClass::num_modules;
 
 static int hk_identify(hap_acc_t *ha)
 {
@@ -24,6 +25,7 @@ static int hk_identify(hap_acc_t *ha)
 HomekitClass::HomekitClass()
 {
   module_t *modules = (module_t *)malloc(MAX_MODULE_NUM * sizeof(module_t));
+  num_modules = 0;
 }
 
 int HomekitClass::init()
@@ -84,11 +86,27 @@ int HomekitClass::beginAccessory()
   static bool first = true;
   int ret = HAP_SUCCESS;
 
+  for (int i = 0; i < num_modules; i++)
+  {
+    hap_serv_t *service;
+
+    service = hap_serv_switch_create(modules[i].state);
+    hap_serv_add_char(service, hap_char_name_create((char *)modules[i].name));
+
+    hap_char_t *characteristic = hap_serv_get_char_by_uuid(service, HAP_CHAR_UUID_ON);
+
+    hap_serv_set_write_cb(service, switchWrite);
+
+    modules[i].hs = service;
+    modules[i].hc = characteristic;
+    hap_acc_add_serv(_accessory, service);
+  }
+
   hap_add_accessory(_accessory);
 
   if (first)
   {
-    
+
     ret = hap_start();
     first = false;
   }
@@ -99,6 +117,7 @@ int HomekitClass::beginAccessory()
 int HomekitClass::deleteAccessory()
 {
   hap_acc_delete(_accessory);
+  num_modules = 0;
 
   return 0;
 }
@@ -106,30 +125,12 @@ int HomekitClass::deleteAccessory()
 /* Create the Switch Service */
 int HomekitClass::addService(uint8_t index, uint8_t state, const char *name)
 {
-  hap_serv_t *service;
+  modules[index].name = strdup(name);
+  modules[index].state = state;
+  modules[index].event_triggered = false;
+  num_modules++;
 
-  service = hap_serv_switch_create(state);
-  hap_serv_add_char(service, hap_char_name_create((char *)name));
-
-  /* Get pointer to the outlet in use characteristic which we need to monitor for state changes */
-  hap_char_t *characteristic = hap_serv_get_char_by_uuid(service, HAP_CHAR_UUID_ON);
-
-  /* Set the write callback for the service */
-  hap_serv_set_write_cb(service, switchWrite);
-
-  /* Add the Switch Service to the Accessory Object */
-  int ret = hap_acc_add_serv(_accessory, service);
-
-  module_t module = {
-      .name = (char *)name,
-      .hs = service,
-      .hc = characteristic,
-      .event_triggered = false,
-  };
-  /* Create module db */
-  modules[index] = module;
-
-  return ret;
+  return 0;
 }
 
 int HomekitClass::setServiceValue(uint8_t index, uint8_t state)
@@ -168,9 +169,7 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
 
     if (!strcmp(hap_char_get_type_uuid(write->hc), HAP_CHAR_UUID_ON))
     {
-      ESP_LOGI(TAG, "Received Write. Switch %s", write->val.b ? "On" : "Off");
-
-      for (int i = 0; i < MAX_MODULE_NUM; i++)
+      for (int i = 0; i < HomekitClass::num_modules; i++)
       {
         hap_char_t *m_hc = HomekitClass::modules[i].hc;
 

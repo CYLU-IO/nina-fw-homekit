@@ -152,7 +152,6 @@ int homekit_setServiceValue(const uint8_t command[], uint8_t response[])
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
   response[4] = Homekit.setServiceValue(index, state);
-  ;
 
   return 6;
 }

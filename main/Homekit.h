@@ -14,6 +14,7 @@ typedef struct
   char *name;
   hap_serv_t *hs;
   hap_char_t *hc;
+  bool state;
   bool event_triggered;
 } module_t;
 
@@ -22,11 +23,11 @@ class HomekitClass
 private:
   char _acc_serial[HK_ACC_SERIAL_MAX_LENGTH + 1];
   char _acc_name[HK_ACC_NAME_MAX_LENGTH + 1];
-  int num_modules;
 
 public:
   static hap_acc_t *_accessory;
   static module_t modules[MAX_MODULE_NUM];
+  static int num_modules;
 
   HomekitClass();
 

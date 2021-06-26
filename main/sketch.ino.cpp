@@ -34,6 +34,13 @@ void setup()
 
   Homekit.init();
   WifiMgr.begin();
+
+  //if (Homekit.countAccessory() > 1) Homekit.deleteAccessory();
+
+  //Homekit.createAccessory("TW0138WJC9T", "CordBlock");
+  //Homekit.addService(1, 1, "Switch 2");
+  //Homekit.addService(0, 0, "Switch 1");
+  //Homekit.beginAccessory();
 }
 
 void setupSpiffs()
