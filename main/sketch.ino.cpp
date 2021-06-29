@@ -24,12 +24,14 @@ extern "C"
 uint8_t *commandBuffer;
 uint8_t *responseBuffer;
 
-void setupSPI();
 void setupSpiffs();
 
 void setup()
 {
-  setupSPI();
+  SPIS.begin();
+  commandBuffer = (uint8_t *)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
+  responseBuffer = (uint8_t *)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
+  CommandHandler.begin();
 
   CoreBridge.init();
 
@@ -37,7 +39,6 @@ void setup()
   CoreBridge.addModule(1, 1, "Switch 2");
   CoreBridge.addModule(0, 0, "Switch 1");
   CoreBridge.beginHomekit();
-
   CoreBridge.setModuleValue(0, 1);*/
 }
 
@@ -50,16 +51,6 @@ void setupSpiffs()
       .format_if_mount_failed = true};
 
   esp_err_t ret = esp_vfs_spiffs_register(&conf);
-}
-
-void setupSPI()
-{
-  SPIS.begin();
-
-  commandBuffer = (uint8_t *)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
-  responseBuffer = (uint8_t *)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
-
-  CommandHandler.begin();
 }
 
 void loop()

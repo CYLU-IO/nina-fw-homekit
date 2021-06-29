@@ -20,6 +20,7 @@
 
 #include <Arduino.h>
 
+#include "CoreBridge.h"
 #include "MqttCtrl.h"
 
 static const char *TAG = "MQTTCTRL";
@@ -67,8 +68,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
       char cmd = event->data[0];
       int length = (event->data[1] & 0xff) | (event->data[2] << 8);
 
-      printf("MQTT Data Length: %i\n", length);
-
       switch (cmd)
       {
       case MQTT_CMD_REQUEST_DATA:
@@ -78,17 +77,15 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
 
       case MQTT_CMD_DO_ACTION:
-        /*switch (event->data[3]) {
-          
-        }*/
+        for (int i = 0; i < length / 2; i++) {
+          CoreBridge.setModuleValue(event->data[i * 2 + 3], event->data[i * 2 + 4]);
+        }
         break;
 
       case MQTT_CMD_CONFIGURE:
         printf("Configure System\n");
         break;
       }
-
-      printf("MQTT Data Length: %i\n", length);
     }
     break;
 
@@ -144,6 +141,11 @@ int MqttCtrlClass::disconnect()
 int MqttCtrlClass::stop()
 {
   return esp_mqtt_client_stop(client);
+}
+
+int MqttCtrlClass::notify(uint8_t index, uint8_t state)
+{
+  return esp_mqtt_client_publish(client, MQTT_URL_STATUS, "Something changes", 0, 2, 0);
 }
 
 MqttCtrlClass MqttCtrl;

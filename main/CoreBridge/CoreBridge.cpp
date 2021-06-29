@@ -73,11 +73,21 @@ int CoreBridgeClass::addModule(uint8_t index, uint8_t state, const char *name)
   return ESP_OK;
 }
 
-int CoreBridgeClass::setModuleValue(uint8_t index, uint8_t state)
+int CoreBridgeClass::setModuleValue(uint8_t index, uint8_t state, bool trigger)
 {
   modules[index].state = state;
 
-  return Homekit.setServiceValue((hap_char_t *)modules[index].hc, state);
+  if (trigger) modules[index].event_triggered = true;
+
+  Homekit.setServiceValue((hap_char_t *)modules[index].hc, state);
+  MqttCtrl.notify(index, state);
+
+  return ESP_OK;
+}
+
+int CoreBridgeClass::setModuleValue(uint8_t index, uint8_t state)
+{
+  return CoreBridge.setModuleValue(index, state, true);
 }
 
 int CoreBridgeClass::getModuleValue(uint8_t index)

@@ -1,10 +1,10 @@
 #include <lwip/sockets.h>
 #include "esp_log.h"
 
+#include <Arduino.h>
 #include "CommandHandler.h"
 #include "CoreBridge/CoreBridge.h"
 #include "CoreBridge/WifiManager.h"
-#include "CoreBridge/Homekit.h"
 
 #include <nvs_flash.h>
 #include <esp_wifi.h>
@@ -50,21 +50,7 @@ int resetToFactory(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-/*** HOMEKIT ***/
-int homekit_getVersion(const uint8_t command[], uint8_t response[])
-{
-  const char *res = "1.0.0";
-  uint8_t resLen = strlen(res);
-
-  response[2] = 1;      // number of parameters
-  response[3] = resLen; // parameter 1 length
-
-  memcpy(&response[4], res, resLen);
-
-  return (5 + resLen);
-}
-
-int homekit_createAccessory(const uint8_t command[], uint8_t response[])
+int createAccessory(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
@@ -73,7 +59,7 @@ int homekit_createAccessory(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int homekit_countAccessory(const uint8_t command[], uint8_t response[])
+int countAccessory(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
@@ -82,7 +68,7 @@ int homekit_countAccessory(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int homekit_beginAccessory(const uint8_t command[], uint8_t response[])
+int beginAccessory(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
@@ -91,7 +77,7 @@ int homekit_beginAccessory(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int homekit_addService(const uint8_t command[], uint8_t response[])
+int addModule(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
   uint8_t state = command[6];
@@ -107,7 +93,7 @@ int homekit_addService(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int homekit_getServiceValue(const uint8_t command[], uint8_t response[])
+int getModuleValue(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
 
@@ -118,19 +104,19 @@ int homekit_getServiceValue(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int homekit_setServiceValue(const uint8_t command[], uint8_t response[])
+int setModuleValue(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
   uint8_t state = command[6];
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.setModuleValue(index, state);
+  response[4] = CoreBridge.setModuleValue(index, state, false);
 
   return 6;
 }
 
-int homekit_readServiceTriggered(const uint8_t command[], uint8_t response[])
+int readModuleTriggered(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
 
@@ -572,16 +558,16 @@ const CommandHandlerType commandHandlers[] = {
     resetToFactory,
 
     // 0x20 -> 0x2f
-    homekit_getVersion,
+    createAccessory,
+    countAccessory,
+    beginAccessory,
+    addModule,
+    getModuleValue,
+    setModuleValue,
+    readModuleTriggered,
     NULL,
-    homekit_createAccessory,
-    homekit_countAccessory,
-    homekit_beginAccessory,
     NULL,
-    homekit_addService,
-    homekit_setServiceValue,
-    homekit_getServiceValue,
-    homekit_readServiceTriggered,
+    NULL,
     NULL,
     NULL,
     NULL,

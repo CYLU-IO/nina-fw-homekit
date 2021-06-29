@@ -54,6 +54,8 @@ int HomekitClass::createAccessory(const char *serial, const char *name)
   if (!_accessory)
     return HAP_FAIL;
 
+  hap_update_config_number();
+
 /* Set hardcoded accessory code, later shoule be define in factory_nvs */
 #ifdef CONFIG_EXAMPLE_USE_HARDCODED_SETUP_CODE
   hap_set_setup_code(CONFIG_EXAMPLE_SETUP_CODE);
@@ -139,13 +141,11 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
 
         if (hap_char_get_iid((hap_char_t *)module->hc) == hap_char_get_iid(write->hc))
         {
-          module->event_triggered = true;
+          CoreBridge.setModuleValue(i, (uint8_t)write->val.b);
+          *(write->status) = HAP_STATUS_SUCCESS;
           break;
         }
       }
-
-      hap_char_update_val(write->hc, &(write->val));
-      *(write->status) = HAP_STATUS_SUCCESS;
     }
     else
     {

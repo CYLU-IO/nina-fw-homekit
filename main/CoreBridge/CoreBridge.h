@@ -10,6 +10,8 @@
 typedef struct
 {
   char *name;
+  int current;
+  int priority;
   hap_serv_t *hs;
   hap_char_t *hc;
   bool state;
@@ -39,7 +41,10 @@ public:
   int beginHomekit();
 
   int addModule(uint8_t index, uint8_t state, const char *name);
+
+  int setModuleValue(uint8_t index, uint8_t state, bool trigger);
   int setModuleValue(uint8_t index, uint8_t state);
+
   int getModuleValue(uint8_t index);
   int readModuleTriggered(uint8_t index);
 

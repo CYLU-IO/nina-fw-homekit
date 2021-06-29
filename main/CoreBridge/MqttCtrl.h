@@ -47,6 +47,8 @@ public:
   int disconnect();
 
   int stop();
+
+  int notify(uint8_t index, uint8_t state);
 };
 
 extern MqttCtrlClass MqttCtrl;
