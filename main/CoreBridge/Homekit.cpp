@@ -4,8 +4,9 @@
 #include <freertos/task.h>
 #include <freertos/queue.h>
 #include <esp_log.h>
-
 #include <hap.h>
+
+#include "CoreBridge.h"
 #include "Homekit.h"
 
 #include <hap_apple_servs.h>
@@ -14,8 +15,6 @@
 static const char *TAG = "Homekit";
 
 hap_acc_t *HomekitClass::_accessory;
-module_t HomekitClass::modules[MAX_MODULE_NUM];
-int HomekitClass::num_modules;
 
 static int hk_identify(hap_acc_t *ha)
 {
@@ -24,15 +23,10 @@ static int hk_identify(hap_acc_t *ha)
 
 HomekitClass::HomekitClass()
 {
-  module_t *modules = (module_t *)malloc(MAX_MODULE_NUM * sizeof(module_t));
-  num_modules = 0;
 }
 
 int HomekitClass::init()
 {
-  memset(&_acc_serial, 0x00, sizeof(_acc_serial));
-  memset(&_acc_name, 0x00, sizeof(_acc_name));
-
   hap_set_debug_level(HAP_DEBUG_LEVEL_INFO);
 
   return hap_init(HAP_TRANSPORT_WIFI);
@@ -43,14 +37,11 @@ int HomekitClass::createAccessory(const char *serial, const char *name)
 {
   int ret = 0;
 
-  strncpy((char *)_acc_serial, serial, HK_ACC_SERIAL_MAX_LENGTH);
-  strncpy((char *)_acc_name, name, HK_ACC_NAME_MAX_LENGTH);
-
   hap_acc_cfg_t cfg = {
-      .name = (char *)_acc_name,
+      .name = (char *)name,
       .model = "CDBKV01TWA",
-      .manufacturer = "Cylu Design",
-      .serial_num = (char *)_acc_serial,
+      .manufacturer = "CYLU.IO",
+      .serial_num = (char *)serial,
       .fw_rev = "1.0.0",
       .hw_rev = "1.0",
       .pv = "1.1.0",
@@ -86,19 +77,20 @@ int HomekitClass::beginAccessory()
   static bool first = true;
   int ret = HAP_SUCCESS;
 
-  for (int i = 0; i < num_modules; i++)
+  for (int i = 0; i < CoreBridge.getModuleNum(); i++)
   {
+    module_t *module = CoreBridge.getModule(i);
     hap_serv_t *service;
 
-    service = hap_serv_switch_create(modules[i].state);
-    hap_serv_add_char(service, hap_char_name_create((char *)modules[i].name));
+    service = hap_serv_switch_create(module->state);
+    hap_serv_add_char(service, hap_char_name_create((char *)module->name));
 
     hap_char_t *characteristic = hap_serv_get_char_by_uuid(service, HAP_CHAR_UUID_ON);
 
     hap_serv_set_write_cb(service, switchWrite);
 
-    modules[i].hs = service;
-    modules[i].hc = characteristic;
+    module->hs = service;
+    module->hc = characteristic;
     hap_acc_add_serv(_accessory, service);
   }
 
@@ -117,45 +109,17 @@ int HomekitClass::beginAccessory()
 int HomekitClass::deleteAccessory()
 {
   hap_acc_delete(_accessory);
-  num_modules = 0;
 
   return 0;
 }
 
-/* Create the Switch Service */
-int HomekitClass::addService(uint8_t index, uint8_t state, const char *name)
+int HomekitClass::setServiceValue(hap_char_t *hc, uint8_t state)
 {
-  modules[index].name = strdup(name);
-  modules[index].state = state;
-  modules[index].event_triggered = false;
-  num_modules++;
-
-  return 0;
-}
-
-int HomekitClass::setServiceValue(uint8_t index, uint8_t state)
-{
-  hap_char_t *hc = modules[index].hc;
   hap_val_t appliance_value = {
       .b = (bool)state,
   };
 
   return hap_char_update_val(hc, &appliance_value);
-}
-
-int HomekitClass::getServiceValue(uint8_t index)
-{
-  const hap_val_t *cur_val = hap_char_get_val((hap_char_t *)modules[index].hc);
-
-  return cur_val->i;
-}
-
-int HomekitClass::readServiceTriggered(uint8_t index)
-{
-  bool b = modules[index].event_triggered;
-  modules[index].event_triggered = false; //clean after response
-
-  return (int)b;
 }
 
 int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *serv_priv, void *write_priv)
@@ -169,13 +133,13 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
 
     if (!strcmp(hap_char_get_type_uuid(write->hc), HAP_CHAR_UUID_ON))
     {
-      for (int i = 0; i < HomekitClass::num_modules; i++)
+      for (int i = 0; i < CoreBridge.getModuleNum(); i++)
       {
-        hap_char_t *m_hc = HomekitClass::modules[i].hc;
+        module_t *module = CoreBridge.getModule(i);
 
-        if (hap_char_get_iid(m_hc) == hap_char_get_iid(write->hc))
+        if (hap_char_get_iid((hap_char_t *)module->hc) == hap_char_get_iid(write->hc))
         {
-          HomekitClass::modules[i].event_triggered = true;
+          module->event_triggered = true;
           break;
         }
       }

@@ -4,30 +4,11 @@
 #include <Arduino.h>
 #include <hap.h>
 
-#define MAX_MODULE_NUM 20
-
-#define HK_ACC_SERIAL_MAX_LENGTH 12
-#define HK_ACC_NAME_MAX_LENGTH 32
-
-typedef struct
-{
-  char *name;
-  hap_serv_t *hs;
-  hap_char_t *hc;
-  bool state;
-  bool event_triggered;
-} module_t;
-
 class HomekitClass
 {
-private:
-  char _acc_serial[HK_ACC_SERIAL_MAX_LENGTH + 1];
-  char _acc_name[HK_ACC_NAME_MAX_LENGTH + 1];
 
 public:
   static hap_acc_t *_accessory;
-  static module_t modules[MAX_MODULE_NUM];
-  static int num_modules;
 
   HomekitClass();
 
@@ -41,13 +22,7 @@ public:
 
   int deleteAccessory();
 
-  int addService(uint8_t index, uint8_t state, const char *name);
-
-  int setServiceValue(uint8_t index, uint8_t state);
-
-  int getServiceValue(uint8_t index);
-
-  int readServiceTriggered(uint8_t index);
+  int setServiceValue(hap_char_t *hc, uint8_t state);
 
   static int switchWrite(hap_write_data_t write_data[], int count, void *serv_priv, void *write_priv);
 };

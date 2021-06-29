@@ -64,29 +64,11 @@ int homekit_getVersion(const uint8_t command[], uint8_t response[])
   return (5 + resLen);
 }
 
-int homekit_init(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.init();
-
-  return 6;
-}
-
 int homekit_createAccessory(const uint8_t command[], uint8_t response[])
 {
-  char serial[12 + 1];
-  char name[32 + 1];
-
-  memset(serial, 0x00, sizeof(serial));
-  memset(name, 0x00, sizeof(name));
-
-  memcpy(serial, &command[4], command[3]);
-  memcpy(name, &command[5 + command[3]], command[4 + command[3]]);
-
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.createAccessory(serial, name);
+  response[4] = CoreBridge.createAccessory();
 
   return 6;
 }
@@ -95,7 +77,7 @@ int homekit_countAccessory(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.countAccessory();
+  response[4] = CoreBridge.countAccessory();
 
   return 6;
 }
@@ -104,16 +86,7 @@ int homekit_beginAccessory(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.beginAccessory();
-
-  return 6;
-}
-
-int homekit_deleteAccessory(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = Homekit.deleteAccessory();
+  response[4] = CoreBridge.beginHomekit();
 
   return 6;
 }
@@ -129,7 +102,7 @@ int homekit_addService(const uint8_t command[], uint8_t response[])
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.addService(index, state, name);
+  response[4] = CoreBridge.addModule(index, state, name);
 
   return 6;
 }
@@ -140,7 +113,7 @@ int homekit_getServiceValue(const uint8_t command[], uint8_t response[])
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.getServiceValue(index);
+  response[4] = CoreBridge.getModuleValue(index);
 
   return 6;
 }
@@ -152,7 +125,7 @@ int homekit_setServiceValue(const uint8_t command[], uint8_t response[])
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.setServiceValue(index, state);
+  response[4] = CoreBridge.setModuleValue(index, state);
 
   return 6;
 }
@@ -163,7 +136,7 @@ int homekit_readServiceTriggered(const uint8_t command[], uint8_t response[])
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = Homekit.readServiceTriggered(index);
+  response[4] = CoreBridge.readModuleTriggered(index);
 
   return 6;
 }
@@ -600,11 +573,11 @@ const CommandHandlerType commandHandlers[] = {
 
     // 0x20 -> 0x2f
     homekit_getVersion,
-    homekit_init,
+    NULL,
     homekit_createAccessory,
     homekit_countAccessory,
     homekit_beginAccessory,
-    homekit_deleteAccessory,
+    NULL,
     homekit_addService,
     homekit_setServiceValue,
     homekit_getServiceValue,

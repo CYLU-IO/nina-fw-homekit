@@ -33,12 +33,12 @@ void setup()
 
   CoreBridge.init();
 
-  //if (Homekit.countAccessory() > 1) Homekit.deleteAccessory();
+  /*CoreBridge.createAccessory();
+  CoreBridge.addModule(1, 1, "Switch 2");
+  CoreBridge.addModule(0, 0, "Switch 1");
+  CoreBridge.beginHomekit();
 
-  //Homekit.createAccessory("TW0138WJC9T", "CordBlock");
-  //Homekit.addService(1, 1, "Switch 2");
-  //Homekit.addService(0, 0, "Switch 1");
-  //Homekit.beginAccessory();
+  CoreBridge.setModuleValue(0, 1);*/
 }
 
 void setupSpiffs()
