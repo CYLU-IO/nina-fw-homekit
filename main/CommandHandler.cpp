@@ -2,8 +2,9 @@
 #include "esp_log.h"
 
 #include "CommandHandler.h"
-#include "WifiManager.h"
-#include "Homekit.h"
+#include "CoreBridge/CoreBridge.h"
+#include "CoreBridge/WifiManager.h"
+#include "CoreBridge/Homekit.h"
 
 #include <nvs_flash.h>
 #include <esp_wifi.h>

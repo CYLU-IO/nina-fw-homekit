@@ -71,7 +71,7 @@ void wifimgr_event_handler(void *arg, esp_event_base_t event_base,
     s_retry_num = 0;
     s_wifi_status = WL_CONNECTED;
 
-    //MqttCtrl.begin();
+    MqttCtrl.begin();
 
     xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
   }

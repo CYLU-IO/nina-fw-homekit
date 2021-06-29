@@ -17,8 +17,7 @@ extern "C"
 #include <SPIS.h>
 
 #include "CommandHandler.h"
-#include "WifiManager.h"
-#include "Homekit.h"
+#include "CoreBridge/CoreBridge.h"
 
 #define SPI_BUFFER_LEN SPI_MAX_DMA_LEN
 
@@ -32,8 +31,7 @@ void setup()
 {
   setupSPI();
 
-  Homekit.init();
-  WifiMgr.begin();
+  CoreBridge.init();
 
   //if (Homekit.countAccessory() > 1) Homekit.deleteAccessory();
 

@@ -18,6 +18,8 @@
 #include "esp_log.h"
 #include "mqtt_client.h"
 
+#include <Arduino.h>
+
 #include "MqttCtrl.h"
 
 static const char *TAG = "MQTTCTRL";
@@ -44,43 +46,50 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
   switch ((esp_mqtt_event_id_t)event_id)
   {
   case MQTT_EVENT_CONNECTED:
-    ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-    msg_id = esp_mqtt_client_publish(client, "/topic/qos1", "data_3", 0, 1, 0);
-    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
-    msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
-    ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+    msg_id = esp_mqtt_client_subscribe(client, MQTT_URL_CMD, 2);
 
-    msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
-    ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-
-    msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
-    ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
+    esp_mqtt_client_publish(client, MQTT_URL_STATUS, "connected", 0, 2, 0);
     s_mqttctrl_status = MQC_CONNECTED;
     break;
 
   case MQTT_EVENT_DISCONNECTED:
     s_mqttctrl_status = MQC_DISCONNECTED;
-    ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
     break;
 
   case MQTT_EVENT_SUBSCRIBED:
-    ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-    msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
-    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
-    break;
-
-  case MQTT_EVENT_UNSUBSCRIBED:
-    ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
-    break;
-
-  case MQTT_EVENT_PUBLISHED:
-    ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+    //printf("Triggered MQTT Status Publish\n");
+    //esp_mqtt_client_publish(client, MQTT_URL_STATUS, "test_msg", 0, 2, 0);
     break;
 
   case MQTT_EVENT_DATA:
-    ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-    printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-    printf("DATA=%.*s\r\n", event->data_len, event->data);
+    if (strcmp(event->topic, MQTT_URL_CMD) == 0)
+    {
+      char cmd = event->data[0];
+      int length = (event->data[1] & 0xff) | (event->data[2] << 8);
+
+      printf("MQTT Data Length: %i\n", length);
+
+      switch (cmd)
+      {
+      case MQTT_CMD_REQUEST_DATA:
+        /*switch (event->data[3]) {
+          case 
+        }*/
+        break;
+
+      case MQTT_CMD_DO_ACTION:
+        /*switch (event->data[3]) {
+          
+        }*/
+        break;
+
+      case MQTT_CMD_CONFIGURE:
+        printf("Configure System\n");
+        break;
+      }
+
+      printf("MQTT Data Length: %i\n", length);
+    }
     break;
 
   case MQTT_EVENT_ERROR:
@@ -103,7 +112,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 MqttCtrlClass::MqttCtrlClass()
 {
   const esp_mqtt_client_config_t mqtt_cfg = {
-      .uri = "ws://broker.emqx.io:8083/mqtt",
+      .uri = "mqtt://10.144.1.38:1883",
   };
 
   client = esp_mqtt_client_init(&mqtt_cfg);
