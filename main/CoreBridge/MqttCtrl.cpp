@@ -104,7 +104,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 MqttCtrlClass::MqttCtrlClass()
 {
   const esp_mqtt_client_config_t mqtt_cfg = {
-      .uri = "mqtt://10.144.1.38:1883",
+      .uri = "ws://10.144.1.38:1883/mqtt",
       .lwt_topic = MQTT_URL_STATUS,
       .lwt_msg = "{\"type\":\"CONNC\",\"value\":0}",
       .lwt_qos = 0,
@@ -151,6 +151,20 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, uint8_t value)
   cJSON_AddStringToObject(root, "name", name);
   cJSON_AddNumberToObject(root, "index", index);
   cJSON_AddNumberToObject(root, "value", value);
+
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  cJSON_Delete(root);
+  return ret;
+}
+
+int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, const char *value)
+{
+  cJSON *root;
+	root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "MODULE_UPDATE");
+  cJSON_AddStringToObject(root, "name", name);
+  cJSON_AddNumberToObject(root, "index", index);
+  cJSON_AddStringToObject(root, "value", value);
 
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
   cJSON_Delete(root);

@@ -49,6 +49,7 @@ public:
   int stop();
 
   int moduleUpdate(uint8_t index, const char *name, uint8_t value);
+  int moduleUpdate(uint8_t index, const char *name, const char *value);
 };
 
 extern MqttCtrlClass MqttCtrl;
