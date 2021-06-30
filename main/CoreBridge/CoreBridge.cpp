@@ -40,7 +40,8 @@ int CoreBridgeClass::setDeviceName(const char *name)
 
 int CoreBridgeClass::createAccessory()
 {
-  if (CoreBridge.countAccessory() > 0) CoreBridge.deleteAccessory();
+  if (CoreBridge.countAccessory() > 0)
+    CoreBridge.deleteAccessory();
 
   return Homekit.createAccessory(serial_number, device_name);
 }
@@ -77,10 +78,15 @@ int CoreBridgeClass::setModuleValue(uint8_t index, uint8_t state, bool trigger)
 {
   modules[index].state = state;
 
-  if (trigger) modules[index].event_triggered = true;
-
-  Homekit.setServiceValue((hap_char_t *)modules[index].hc, state);
-  MqttCtrl.notify(index, state);
+  if (trigger)
+  {
+    modules[index].event_triggered = true;
+  }
+  else
+  {
+    Homekit.setServiceValue((hap_char_t *)modules[index].hc, state);
+    MqttCtrl.moduleUpdate(index, "switch_state", state);
+  }
 
   return ESP_OK;
 }

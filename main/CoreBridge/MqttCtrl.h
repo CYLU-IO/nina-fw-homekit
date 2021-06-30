@@ -48,7 +48,7 @@ public:
 
   int stop();
 
-  int notify(uint8_t index, uint8_t state);
+  int moduleUpdate(uint8_t index, const char *name, uint8_t value);
 };
 
 extern MqttCtrlClass MqttCtrl;

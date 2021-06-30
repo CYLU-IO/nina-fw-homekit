@@ -15,7 +15,9 @@
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
 
+
 #include "esp_log.h"
+#include "cJSON.h"
 #include "mqtt_client.h"
 
 #include <Arduino.h>
@@ -23,23 +25,17 @@
 #include "CoreBridge.h"
 #include "MqttCtrl.h"
 
-static const char *TAG = "MQTTCTRL";
-
 static int s_mqttctrl_status = 255;
 
 esp_mqtt_client_handle_t MqttCtrlClass::client;
 
 static void log_error_if_nonzero(const char *message, int error_code)
 {
-  if (error_code != 0)
-  {
-    ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
-  }
+  if (error_code != 0) printf("Last error %s: 0x%x\n", message, error_code);
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
-  ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
   esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
   esp_mqtt_client_handle_t client = event->client;
   int msg_id;
@@ -48,18 +44,17 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
   {
   case MQTT_EVENT_CONNECTED:
     msg_id = esp_mqtt_client_subscribe(client, MQTT_URL_CMD, 2);
-
-    esp_mqtt_client_publish(client, MQTT_URL_STATUS, "connected", 0, 2, 0);
     s_mqttctrl_status = MQC_CONNECTED;
     break;
 
   case MQTT_EVENT_DISCONNECTED:
     s_mqttctrl_status = MQC_DISCONNECTED;
+    esp_mqtt_client_reconnect(client);
     break;
 
   case MQTT_EVENT_SUBSCRIBED:
-    //printf("Triggered MQTT Status Publish\n");
-    //esp_mqtt_client_publish(client, MQTT_URL_STATUS, "test_msg", 0, 2, 0);
+    printf("Triggered MQTT Status Publish\n");
+    esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":1}", 0, 2, 1);
     break;
 
   case MQTT_EVENT_DATA:
@@ -90,18 +85,18 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     break;
 
   case MQTT_EVENT_ERROR:
-    ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
+    printf("MQTT_EVENT_ERROR\n");
+    
     if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT)
     {
       log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
       log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
       log_error_if_nonzero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
-      ESP_LOGI(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
     }
     break;
 
   default:
-    ESP_LOGI(TAG, "Other event id:%d", event->event_id);
+    printf("Other event id:%d\n", event->event_id);
     break;
   }
 }
@@ -110,6 +105,11 @@ MqttCtrlClass::MqttCtrlClass()
 {
   const esp_mqtt_client_config_t mqtt_cfg = {
       .uri = "mqtt://10.144.1.38:1883",
+      .lwt_topic = MQTT_URL_STATUS,
+      .lwt_msg = "{\"type\":\"CONNC\",\"value\":0}",
+      .lwt_qos = 0,
+      .lwt_retain = 1,
+      .lwt_msg_len = 12,
   };
 
   client = esp_mqtt_client_init(&mqtt_cfg);
@@ -143,9 +143,18 @@ int MqttCtrlClass::stop()
   return esp_mqtt_client_stop(client);
 }
 
-int MqttCtrlClass::notify(uint8_t index, uint8_t state)
+int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, uint8_t value)
 {
-  return esp_mqtt_client_publish(client, MQTT_URL_STATUS, "Something changes", 0, 2, 0);
+  cJSON *root;
+	root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "MODULE_UPDATE");
+  cJSON_AddStringToObject(root, "name", name);
+  cJSON_AddNumberToObject(root, "index", index);
+  cJSON_AddNumberToObject(root, "value", value);
+
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  cJSON_Delete(root);
+  return ret;
 }
 
 MqttCtrlClass MqttCtrl;
