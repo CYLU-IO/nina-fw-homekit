@@ -10,6 +10,7 @@
 typedef struct
 {
   char *name;
+  int type;
   int current;
   int priority;
   hap_serv_t *hs;

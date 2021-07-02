@@ -67,6 +67,8 @@ int CoreBridgeClass::beginHomekit()
 int CoreBridgeClass::addModule(uint8_t index, uint8_t state, const char *name)
 {
   modules[index].name = strdup(name);
+  modules[index].type = 0;
+  modules[index].priority = 1;
   modules[index].state = state;
   modules[index].event_triggered = false;
   num_modules++;

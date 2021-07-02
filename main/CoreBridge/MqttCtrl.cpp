@@ -15,7 +15,6 @@
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
 
-
 #include "esp_log.h"
 #include "cJSON.h"
 #include "mqtt_client.h"
@@ -31,7 +30,8 @@ esp_mqtt_client_handle_t MqttCtrlClass::client;
 
 static void log_error_if_nonzero(const char *message, int error_code)
 {
-  if (error_code != 0) printf("Last error %s: 0x%x\n", message, error_code);
+  if (error_code != 0)
+    printf("Last error %s: 0x%x\n", message, error_code);
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
@@ -66,13 +66,17 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
       switch (cmd)
       {
       case MQTT_CMD_REQUEST_DATA:
-        /*switch (event->data[3]) {
-          case 
-        }*/
+        switch (event->data[3])
+        {
+        case MQTT_DATA_MODULES_DATA:
+          MqttCtrl.modulesUpdate();
+          break;
+        }
         break;
 
       case MQTT_CMD_DO_ACTION:
-        for (int i = 0; i < length / 2; i++) {
+        for (int i = 0; i < length / 2; i++)
+        {
           CoreBridge.setModuleValue(event->data[i * 2 + 3], event->data[i * 2 + 4]);
         }
         break;
@@ -86,7 +90,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
   case MQTT_EVENT_ERROR:
     printf("MQTT_EVENT_ERROR\n");
-    
+
     if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT)
     {
       log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
@@ -146,10 +150,10 @@ int MqttCtrlClass::stop()
 int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, uint8_t value)
 {
   cJSON *root;
-	root = cJSON_CreateObject();
+  root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "MODULE_UPDATE");
-  cJSON_AddStringToObject(root, "name", name);
   cJSON_AddNumberToObject(root, "index", index);
+  cJSON_AddStringToObject(root, "name", name);
   cJSON_AddNumberToObject(root, "value", value);
 
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
@@ -160,11 +164,41 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, uint8_t value)
 int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, const char *value)
 {
   cJSON *root;
-	root = cJSON_CreateObject();
+  root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "MODULE_UPDATE");
-  cJSON_AddStringToObject(root, "name", name);
   cJSON_AddNumberToObject(root, "index", index);
+  cJSON_AddStringToObject(root, "name", name);
   cJSON_AddStringToObject(root, "value", value);
+
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  cJSON_Delete(root);
+  return ret;
+}
+
+int MqttCtrlClass::modulesUpdate()
+{
+  cJSON *root;
+  root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "MODULES_UPDATE");
+
+  cJSON *pack = cJSON_CreateArray();
+  for (int i = 0; i < CoreBridge.getModuleNum(); i++)
+  {
+    cJSON *m;
+    module_t *module = CoreBridge.getModule(i);
+
+    cJSON_AddItemToArray(pack, m = cJSON_CreateObject());
+    cJSON_AddNumberToObject(m, "index", i);
+    cJSON_AddStringToObject(m, "name", module->name);
+    cJSON_AddNumberToObject(m, "type", module->type);
+    cJSON_AddNumberToObject(m, "priority", module->priority);
+    cJSON_AddNumberToObject(m, "ampere", module->current);
+    cJSON_AddNumberToObject(m, "switch_state", module->state);
+  }
+
+  cJSON_AddItemToObject(root, "value", pack);
+
+  //printf("MQTT Send: %s\n", cJSON_Print(root));
 
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
   cJSON_Delete(root);

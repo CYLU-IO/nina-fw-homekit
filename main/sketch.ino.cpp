@@ -38,8 +38,8 @@ void setup()
   /*CoreBridge.createAccessory();
   CoreBridge.addModule(1, 1, "Switch 2");
   CoreBridge.addModule(0, 0, "Switch 1");
-  CoreBridge.beginHomekit();
-  CoreBridge.setModuleValue(0, 1);*/
+  CoreBridge.beginHomekit();*/
+  //CoreBridge.setModuleValue(0, 1);
 }
 
 void setupSpiffs()
