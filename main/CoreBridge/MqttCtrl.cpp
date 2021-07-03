@@ -75,9 +75,19 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
 
       case MQTT_CMD_DO_ACTION:
-        for (int i = 0; i < length / 2; i++)
+
+        for (int i = 0; i < (length - 1) / 2; i++)
         {
-          CoreBridge.setModuleValue(event->data[i * 2 + 3], event->data[i * 2 + 4]);
+          switch (event->data[3])
+          {
+          case MQTT_DATA_SWITCH_STATE:
+            CoreBridge.setModuleSwitchState(event->data[i * 2 + 4], event->data[i * 2 + 5]);
+            break;
+
+          case MQTT_DATA_PRIORITY:
+            CoreBridge.setModulePrioirty(event->data[i * 2 + 4], event->data[i * 2 + 5]);
+            break;
+          }
         }
         break;
 
@@ -100,7 +110,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     break;
 
   default:
-    printf("Other event id:%d\n", event->event_id);
+    //printf("Other event id:%d\n", event->event_id);
     break;
   }
 }
@@ -147,7 +157,7 @@ int MqttCtrlClass::stop()
   return esp_mqtt_client_stop(client);
 }
 
-int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, uint8_t value)
+int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, int value)
 {
   cJSON *root;
   root = cJSON_CreateObject();
@@ -192,13 +202,11 @@ int MqttCtrlClass::modulesUpdate()
     cJSON_AddStringToObject(m, "name", module->name);
     cJSON_AddNumberToObject(m, "type", module->type);
     cJSON_AddNumberToObject(m, "priority", module->priority);
-    cJSON_AddNumberToObject(m, "ampere", module->current);
+    cJSON_AddNumberToObject(m, "current", module->current);
     cJSON_AddNumberToObject(m, "switch_state", module->state);
   }
 
   cJSON_AddItemToObject(root, "value", pack);
-
-  //printf("MQTT Send: %s\n", cJSON_Print(root));
 
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
   cJSON_Delete(root);

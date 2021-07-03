@@ -79,39 +79,66 @@ int beginAccessory(const uint8_t command[], uint8_t response[])
 
 int addModule(const uint8_t command[], uint8_t response[])
 {
-  uint8_t index = command[4];
-  uint8_t state = command[6];
   char name[25 + 1];
 
-  memset(name, 0x00, sizeof(name));
-  memcpy(name, &command[8], command[7]);
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.addModule(index, state, name);
-
-  return 6;
-}
-
-int getModuleValue(const uint8_t command[], uint8_t response[])
-{
   uint8_t index = command[4];
+  uint8_t type = command[6];
+  uint8_t priority = command[8];
+  uint8_t state = command[10];
+
+
+  memset(name, 0x00, sizeof(name));
+  memcpy(name, &command[12], command[11]);
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.getModuleValue(index);
+  response[4] = CoreBridge.addModule(index, name, type, priority, state);
 
   return 6;
 }
 
-int setModuleValue(const uint8_t command[], uint8_t response[])
+int setModuleSwitchState(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
   uint8_t state = command[6];
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.setModuleValue(index, state, false);
+  response[4] = CoreBridge.setModuleSwitchState(index, state, false);
+
+  return 6;
+}
+
+int getModuleSwitchState(const uint8_t command[], uint8_t response[])
+{
+  uint8_t index = command[4];
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = CoreBridge.getModuleSwitchState(index);
+
+  return 6;
+}
+
+int setModuleCurrent(const uint8_t command[], uint8_t response[])
+{
+  uint8_t index = command[4];
+  uint16_t value = (command[6] & 0xff) | (command[8] << 8);
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = CoreBridge.setModuleCurrent(index, value);
+
+  return 6;
+}
+
+int getModulePrioirty(const uint8_t command[], uint8_t response[])
+{
+  uint8_t index = command[4];
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = CoreBridge.getModulePrioirty(index);
 
   return 6;
 }
@@ -562,11 +589,11 @@ const CommandHandlerType commandHandlers[] = {
     countAccessory,
     beginAccessory,
     addModule,
-    getModuleValue,
-    setModuleValue,
+    setModuleSwitchState,
+    getModuleSwitchState,
+    setModuleCurrent,
+    getModulePrioirty,
     readModuleTriggered,
-    NULL,
-    NULL,
     NULL,
     NULL,
     NULL,

@@ -141,7 +141,7 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
 
         if (hap_char_get_iid((hap_char_t *)module->hc) == hap_char_get_iid(write->hc))
         {
-          CoreBridge.setModuleValue(i, (uint8_t)write->val.b);
+          CoreBridge.setModuleSwitchState(i, (uint8_t)write->val.b);
           *(write->status) = HAP_STATUS_SUCCESS;
           break;
         }

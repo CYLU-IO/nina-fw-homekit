@@ -64,11 +64,12 @@ int CoreBridgeClass::beginHomekit()
   return Homekit.beginAccessory();
 }
 
-int CoreBridgeClass::addModule(uint8_t index, uint8_t state, const char *name)
+int CoreBridgeClass::addModule(uint8_t index, const char *name, uint8_t type, uint8_t priority, uint8_t state)
 {
   modules[index].name = strdup(name);
-  modules[index].type = 0;
-  modules[index].priority = 1;
+  modules[index].type = type;
+  modules[index].current = 0;
+  modules[index].priority = priority;
   modules[index].state = state;
   modules[index].event_triggered = false;
   num_modules++;
@@ -76,7 +77,7 @@ int CoreBridgeClass::addModule(uint8_t index, uint8_t state, const char *name)
   return ESP_OK;
 }
 
-int CoreBridgeClass::setModuleValue(uint8_t index, uint8_t state, bool trigger)
+int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state, bool trigger)
 {
   modules[index].state = state;
 
@@ -93,14 +94,37 @@ int CoreBridgeClass::setModuleValue(uint8_t index, uint8_t state, bool trigger)
   return ESP_OK;
 }
 
-int CoreBridgeClass::setModuleValue(uint8_t index, uint8_t state)
+int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state)
 {
-  return CoreBridge.setModuleValue(index, state, true);
+  return CoreBridge.setModuleSwitchState(index, state, true);
 }
 
-int CoreBridgeClass::getModuleValue(uint8_t index)
+int CoreBridgeClass::getModuleSwitchState(uint8_t index)
 {
   return modules[index].state;
+}
+
+int CoreBridgeClass::setModuleCurrent(uint8_t index, uint16_t value)
+{
+  modules[index].current = value;
+
+  MqttCtrl.moduleUpdate(index, "current", value);
+
+  return ESP_OK;
+}
+
+int CoreBridgeClass::setModulePrioirty(uint8_t index, uint8_t value)
+{
+  modules[index].priority = value;
+
+  MqttCtrl.moduleUpdate(index, "priority", value);
+
+  return ESP_OK;
+}
+
+int CoreBridgeClass::getModulePrioirty(uint8_t index)
+{
+  return modules[index].priority;
 }
 
 int CoreBridgeClass::readModuleTriggered(uint8_t index)

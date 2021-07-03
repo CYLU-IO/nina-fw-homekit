@@ -16,7 +16,8 @@
 #define MQTT_DATA_SUPPLY_VOLTAGE    0x64
 #define MQTT_DATA_CURRENT_HISTORY   0x65
 #define MQTT_DATA_MODULES_DATA      0x66
-#define MQTT_DATA_MODULE_DETAIL     0x67
+#define MQTT_DATA_SWITCH_STATE      0x67
+#define MQTT_DATA_PRIORITY          0x68
 
 #define MQTT_DO_TURN_OFF            0x7a
 #define MQTT_DO_TURN_ON             0x79
@@ -40,16 +41,13 @@ public:
   MqttCtrlClass();
 
   void begin();
-
+  
   int getStatus();
-
   int reconnect();
-
   int disconnect();
-
   int stop();
 
-  int moduleUpdate(uint8_t index, const char *name, uint8_t value);
+  int moduleUpdate(uint8_t index, const char *name, int value);
   int moduleUpdate(uint8_t index, const char *name, const char *value);
 
   int modulesUpdate();
