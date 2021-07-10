@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 #include <hap.h>
+#include <hap_platform_keystore.h>
 #include "CoreBridge.h"
 
 #include "Homekit.h"
@@ -15,14 +16,33 @@ int CoreBridgeClass::num_modules;
 
 CoreBridgeClass::CoreBridgeClass()
 {
+  /*** Modules DB Initialization ***/
   module_t *modules = (module_t *)malloc(MAX_MODULE_NUM * sizeof(module_t));
   num_modules = 0;
 
+  /*** Configuration Restoration ***/
   memset(&serial_number, 0x00, sizeof(serial_number));
   memset(&device_name, 0x00, sizeof(device_name));
 
+  hap_platform_keystore_init_partition(hap_platform_keystore_get_nvs_partition_name(), false);
+  size_t size;
+
+  //Enable POP
+  size = sizeof(enable_pop);
+  if (hap_platform_keystore_get(hap_platform_keystore_get_nvs_partition_name(), "configurations", "enable_pop", (uint8_t *)&enable_pop, &size) != HAP_SUCCESS)
+  {
+    this->setEnablePOP(0);
+  }
+
+  //Device Name
+  size = sizeof(device_name);
+  if (hap_platform_keystore_get_str(hap_platform_keystore_get_nvs_partition_name(), "configurations", "device_name", (char *)&device_name, &size) != HAP_SUCCESS)
+  {
+    this->setDeviceName("CordBlock");
+  }
+
+  //Serial Number (factory NVS)
   strncpy((char *)serial_number, "TW0138WJC9T", SERIAL_NUMBER_LENGTH);
-  strncpy((char *)device_name, "CordBlock", DEVICE_NAME_LENGTH);
 }
 
 void CoreBridgeClass::init()
@@ -34,14 +54,23 @@ void CoreBridgeClass::init()
 int CoreBridgeClass::setDeviceName(const char *name)
 {
   strncpy((char *)device_name, name, DEVICE_NAME_LENGTH);
+  hap_platform_keystore_set_str(hap_platform_keystore_get_nvs_partition_name(), "configurations", "device_name", (const char *)&device_name, sizeof(device_name));
+
+  return ESP_OK;
+}
+
+int CoreBridgeClass::setEnablePOP(uint8_t state)
+{
+  enable_pop = state;
+  hap_platform_keystore_set(hap_platform_keystore_get_nvs_partition_name(), "configurations", "enable_pop", (uint8_t *)&enable_pop, sizeof(enable_pop));
 
   return ESP_OK;
 }
 
 int CoreBridgeClass::createAccessory()
 {
-  if (CoreBridge.countAccessory() > 0)
-    CoreBridge.deleteAccessory();
+  if (this->countAccessory() > 0)
+    this->deleteAccessory();
 
   return Homekit.createAccessory(serial_number, device_name);
 }
@@ -96,7 +125,7 @@ int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state, bool tri
 
 int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state)
 {
-  return CoreBridge.setModuleSwitchState(index, state, true);
+  return this->setModuleSwitchState(index, state, true);
 }
 
 int CoreBridgeClass::getModuleSwitchState(uint8_t index)

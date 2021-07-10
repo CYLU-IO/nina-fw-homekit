@@ -26,6 +26,8 @@ public:
   char serial_number[SERIAL_NUMBER_LENGTH + 1];
   char device_name[DEVICE_NAME_LENGTH + 1];
 
+  uint8_t enable_pop;
+
   static module_t modules[MAX_MODULE_NUM];
   static int num_modules;
 
@@ -34,6 +36,7 @@ public:
   void init();
 
   int setDeviceName(const char *name);
+  int setEnablePOP(uint8_t state);
 
   /*** Homekit ***/
   int createAccessory();

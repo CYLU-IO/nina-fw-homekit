@@ -23,17 +23,17 @@
  */
 #include <esp_log.h>
 #include <nvs_flash.h>
+#include <hap_platform_keystore.h>
 #include <string.h>
-
 
 static const char *TAG = "hap_platform_keystore";
 
-char * hap_platform_keystore_get_nvs_partition_name()
+char *hap_platform_keystore_get_nvs_partition_name()
 {
     return CONFIG_HAP_PLATFORM_DEF_NVS_RUNTIME_PARTITION;
 }
 
-char * hap_platform_keystore_get_factory_nvs_partition_name()
+char *hap_platform_keystore_get_factory_nvs_partition_name()
 {
     return CONFIG_HAP_PLATFORM_DEF_NVS_FACTORY_PARTITION;
 }
@@ -45,32 +45,46 @@ int hap_platform_keystore_init_partition(const char *part_name, bool read_only)
     nvs_sec_cfg_t *cfg = NULL;
     nvs_sec_cfg_t sec_cfg;
     esp_partition_iterator_t iterator = esp_partition_find(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS_KEYS, NULL);
-    if (iterator) {
+    if (iterator)
+    {
         const esp_partition_t *partition = esp_partition_get(iterator);
         err = nvs_flash_read_security_cfg(partition, &sec_cfg);
-        if (err == ESP_OK) {
+        if (err == ESP_OK)
+        {
             cfg = &sec_cfg;
-        } else {
+        }
+        else
+        {
             ESP_LOGE(TAG, "No NVS keys found");
         }
-    } else {
+    }
+    else
+    {
         ESP_LOGE(TAG, "No NVS keys partition found");
     }
-    if (!cfg) {
+    if (!cfg)
+    {
         ESP_LOGE(TAG, "NVS partition '%s' not encrypted", part_name);
-    } else {
+    }
+    else
+    {
         ESP_LOGI(TAG, "NVS partition '%s' is encrypted", part_name);
     }
-    if (read_only) {
+    if (read_only)
+    {
         err = nvs_flash_secure_init_partition(part_name, cfg);
-    } else {
+    }
+    else
+    {
         err = nvs_flash_secure_init_partition(part_name, cfg);
-        if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
+        if (err == ESP_ERR_NVS_NO_FREE_PAGES)
+        {
             ESP_ERROR_CHECK(nvs_flash_erase_partition(part_name));
             err = nvs_flash_secure_init_partition(part_name, cfg);
         }
     }
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
         return 0;
     }
     return -1;
@@ -79,16 +93,21 @@ int hap_platform_keystore_init_partition(const char *part_name, bool read_only)
 int hap_platform_keystore_init_partition(const char *part_name, bool read_only)
 {
     esp_err_t err;
-    if (read_only) {
+    if (read_only)
+    {
         err = nvs_flash_init_partition(part_name);
-    } else {
+    }
+    else
+    {
         err = nvs_flash_init_partition(part_name);
-        if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
+        if (err == ESP_ERR_NVS_NO_FREE_PAGES)
+        {
             ESP_ERROR_CHECK(nvs_flash_erase_partition(part_name));
             err = nvs_flash_init_partition(part_name);
         }
     }
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
         return 0;
     }
     return -1;
@@ -99,35 +118,93 @@ int hap_platform_keystore_get(const char *part_name, const char *name_space, con
 {
     nvs_handle handle;
     esp_err_t err = nvs_open_from_partition(part_name, name_space, NVS_READONLY, &handle);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         return -1;
-    } else {
+    }
+    else
+    {
         err = nvs_get_blob(handle, key, val, val_size);
         nvs_close(handle);
     }
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
+        return 0;
+    }
+    return -1;
+}
+
+int hap_platform_keystore_get_str(const char *part_name, const char *name_space, const char *key, char *val, size_t *val_size)
+{
+    nvs_handle handle;
+    esp_err_t err = nvs_open_from_partition(part_name, name_space, NVS_READONLY, &handle);
+    if (err != ESP_OK)
+    {
+        return -1;
+    }
+    else
+    {
+        err = nvs_get_str(handle, key, val, val_size);
+        nvs_close(handle);
+    }
+    if (err == ESP_OK)
+    {
         return 0;
     }
     return -1;
 }
 
 int hap_platform_keystore_set(const char *part_name, const char *name_space, const char *key, const uint8_t *val, const size_t val_len)
-
 {
     nvs_handle handle;
     esp_err_t err = nvs_open_from_partition(part_name, name_space, NVS_READWRITE, &handle);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         ESP_LOGE(TAG, "Error (%d) opening NVS handle!", err);
-    } else {
+    }
+    else
+    {
         err = nvs_set_blob(handle, key, val, val_len);
-        if (err != ESP_OK) {
+        if (err != ESP_OK)
+        {
             ESP_LOGE(TAG, "Failed to write %s", key);
-        } else {
+        }
+        else
+        {
             nvs_commit(handle);
         }
         nvs_close(handle);
     }
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
+        return 0;
+    }
+    return -1;
+}
+
+int hap_platform_keystore_set_str(const char *part_name, const char *name_space, const char *key, const char *val, const size_t val_len)
+{
+    nvs_handle handle;
+    esp_err_t err = nvs_open_from_partition(part_name, name_space, NVS_READWRITE, &handle);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Error (%d) opening NVS handle!", err);
+    }
+    else
+    {
+        err = nvs_set_str(handle, key, val);
+        if (err != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to write %s", key);
+        }
+        else
+        {
+            nvs_commit(handle);
+        }
+        nvs_close(handle);
+    }
+    if (err == ESP_OK)
+    {
         return 0;
     }
     return -1;
@@ -137,18 +214,25 @@ int hap_platform_keystore_delete(const char *part_name, const char *name_space, 
 {
     nvs_handle handle;
     esp_err_t err = nvs_open_from_partition(part_name, name_space, NVS_READWRITE, &handle);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         ESP_LOGE(TAG, "Error (%d) opening NVS handle!", err);
-    } else {
+    }
+    else
+    {
         err = nvs_erase_key(handle, key);
-        if (err != ESP_OK) {
+        if (err != ESP_OK)
+        {
             ESP_LOGE(TAG, "Failed to delete %s", key);
-        } else {
+        }
+        else
+        {
             nvs_commit(handle);
         }
         nvs_close(handle);
     }
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
         return 0;
     }
     return -1;
@@ -158,18 +242,25 @@ int hap_platform_keystore_delete_namespace(const char *part_name, const char *na
 {
     nvs_handle handle;
     esp_err_t err = nvs_open_from_partition(part_name, name_space, NVS_READWRITE, &handle);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         ESP_LOGE(TAG, "Error (%d) opening NVS handle!", err);
-    } else {
+    }
+    else
+    {
         err = nvs_erase_all(handle);
-        if (err != ESP_OK) {
+        if (err != ESP_OK)
+        {
             ESP_LOGE(TAG, "Failed to delete %s", name_space);
-        } else {
+        }
+        else
+        {
             nvs_commit(handle);
         }
         nvs_close(handle);
     }
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
         return 0;
     }
     return -1;
@@ -178,7 +269,8 @@ int hap_platform_keystore_delete_namespace(const char *part_name, const char *na
 int hap_platfrom_keystore_erase_partition(const char *part_name)
 {
     esp_err_t err = nvs_flash_erase_partition(part_name);
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
         return 0;
     }
     return -1;

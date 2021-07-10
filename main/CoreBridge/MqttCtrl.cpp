@@ -71,6 +71,10 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         case MQTT_DATA_MODULES_DATA:
           MqttCtrl.modulesUpdate();
           break;
+
+        case MQTT_DATA_CONFIGURATIONS:
+          MqttCtrl.configurationsUpdate();
+          break;
         }
         break;
 
@@ -92,7 +96,23 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
 
       case MQTT_CMD_CONFIGURE:
-        printf("Configure System\n");
+        switch (event->data[3])
+        {
+        case MQTT_CONFIG_DEVICE_NAME:
+          char device_name[DEVICE_NAME_LENGTH + 1];
+          memset(device_name, 0x00, sizeof(device_name));
+          memcpy(device_name, &event->data[4], length - 1);
+
+          printf("Configure DEVICE_NAME to %s\n", device_name);
+
+          CoreBridge.setDeviceName(device_name);
+          break;
+
+        case MQTT_CONFIG_ENABLE_POP:
+          printf("Configure ENABLE_POP to %i\n", event->data[4]);
+          CoreBridge.setEnablePOP((int8_t)event->data[4]);
+          break;
+        }
         break;
       }
     }
@@ -207,6 +227,21 @@ int MqttCtrlClass::modulesUpdate()
   }
 
   cJSON_AddItemToObject(root, "value", pack);
+
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  cJSON_Delete(root);
+  return ret;
+}
+
+int MqttCtrlClass::configurationsUpdate()
+{
+  cJSON *root;
+  root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "CONFIGURATIONS_UPDATE");
+
+  cJSON_AddStringToObject(root, "device_name", CoreBridge.device_name);
+  cJSON_AddStringToObject(root, "serial_number", CoreBridge.serial_number);
+  cJSON_AddNumberToObject(root, "enable_pop", CoreBridge.enable_pop);
 
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
   cJSON_Delete(root);

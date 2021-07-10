@@ -18,6 +18,15 @@ int corebridge_getFreeHeap(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
+int corebridge_getEnablePOP(const uint8_t command[], uint8_t response[])
+{
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = CoreBridge.enable_pop;
+
+  return 6;
+}
+
 int wifimgr_getStatus(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
@@ -549,7 +558,7 @@ typedef int (*CommandHandlerType)(const uint8_t command[], uint8_t response[]);
 
 const CommandHandlerType commandHandlers[] = {
     // 0x00 -> 0x0f
-    NULL,
+    corebridge_getEnablePOP,
     NULL,
     NULL,
     NULL,
