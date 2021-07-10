@@ -143,7 +143,7 @@ MqttCtrlClass::MqttCtrlClass()
       .lwt_msg = "{\"type\":\"CONNC\",\"value\":0}",
       .lwt_qos = 0,
       .lwt_retain = 1,
-      .lwt_msg_len = 12,
+      .lwt_msg_len = 26,
   };
 
   client = esp_mqtt_client_init(&mqtt_cfg);
