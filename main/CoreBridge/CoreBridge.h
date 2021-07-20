@@ -3,6 +3,10 @@
 
 #include <hap.h>
 
+#include "Homekit.h"
+#include "MqttCtrl.h"
+#include "WifiManager.h"
+
 #define SERIAL_NUMBER_LENGTH 12
 #define DEVICE_NAME_LENGTH   32
 #define MAX_MODULE_NUM       20

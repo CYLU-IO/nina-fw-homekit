@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include "CommandHandler.h"
 #include "CoreBridge/CoreBridge.h"
-#include "CoreBridge/WifiManager.h"
 
 #include <nvs_flash.h>
 #include <esp_wifi.h>
@@ -159,6 +158,51 @@ int readModuleTriggered(const uint8_t command[], uint8_t response[])
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
   response[4] = CoreBridge.readModuleTriggered(index);
+
+  return 6;
+}
+
+int readWarehouseRequest(const uint8_t command[], uint8_t response[])
+{
+  //int request_addr = MqttCtrl.warehouse_request_addr;
+  int request_addr = 0x02;
+
+  response[2] = 1; // number of parameters
+  response[3] = 2; // parameter 1 length
+  response[4] = request_addr & 0xff;
+  response[5] = (request_addr >> 8) & 0xff;
+
+  MqttCtrl.warehouse_request_addr = 0x00;
+
+  return 7;
+}
+
+int setWarehouseLength(const uint8_t command[], uint8_t response[])
+{
+  uint16_t value = (command[4] & 0xff) | (command[6] << 8);
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = 1;
+
+  MqttCtrl.setWarehouseLength(value);
+
+  return 6;
+}
+
+int setWarehouseBuffer(const uint8_t command[], uint8_t response[])
+{
+  printf("Buffer length: %i\n", command[3]);
+  printf("Printing Buffer:\n");
+
+  for (int i = 0; i < command[3]; i++)
+  {
+    printf("%i\n", command[3 + i]);
+  }
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = 1;
 
   return 6;
 }
@@ -603,7 +647,7 @@ const CommandHandlerType commandHandlers[] = {
     setModuleCurrent,
     getModulePrioirty,
     readModuleTriggered,
-    NULL,
+    setWarehouseBuffer,
     NULL,
     NULL,
     NULL,
@@ -612,9 +656,9 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
 
     // 0x30 -> 0x3f
-    NULL,
-    NULL,
-    NULL,
+    readWarehouseRequest,
+    setWarehouseLength,
+    setWarehouseBuffer,
     NULL,
     NULL,
     NULL,

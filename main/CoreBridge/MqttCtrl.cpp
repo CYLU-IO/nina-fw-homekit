@@ -150,6 +150,7 @@ MqttCtrlClass::MqttCtrlClass()
   esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
 
   s_mqttctrl_status = MQC_IDLE_STATUS;
+  warehouse_request_addr = 0x00;
 }
 
 void MqttCtrlClass::begin()
@@ -242,6 +243,47 @@ int MqttCtrlClass::configurationsUpdate()
   cJSON_AddStringToObject(root, "device_name", CoreBridge.device_name);
   cJSON_AddStringToObject(root, "serial_number", CoreBridge.serial_number);
   cJSON_AddNumberToObject(root, "enable_pop", CoreBridge.enable_pop);
+
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  cJSON_Delete(root);
+  return ret;
+}
+
+void MqttCtrlClass::requestWarehouseLength()
+{
+  warehouse_request_addr = 0x01; //represent asking the length
+}
+
+void MqttCtrlClass::setWarehouseLength(uint16_t length)
+{
+  warehouse_available_length = length;
+}
+
+void MqttCtrlClass::setWarehouseRequest(uint8_t offset) //offest < 30
+{
+  /**
+   * A day of data as one pack, so the offest unit is day
+   **/
+
+  if (offset >= 30)
+    offset = 30;
+
+  warehouse_request_addr = 2 + (144 * offset);
+}
+
+void MqttCtrlClass::setWarehouseBuffer(uint8_t *buf, uint8_t length)
+{
+  //warehouse_buffer = buf;
+  warehouse_buffer_length = length;
+}
+
+int MqttCtrlClass::warehouseRequestBufferUpdate()
+{
+  cJSON *root;
+  root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_UPDATE");
+  cJSON_AddNumberToObject(root, "offset", (warehouse_request_addr - 2) / 144);
+  cJSON_AddItemToObject(root, "value", cJSON_CreateIntArray(warehouse_buffer, warehouse_buffer_length));
 
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
   cJSON_Delete(root);
