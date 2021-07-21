@@ -53,7 +53,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     break;
 
   case MQTT_EVENT_SUBSCRIBED:
-    printf("Triggered MQTT Status Publish\n");
     esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":1}", 0, 2, 1);
     break;
 
@@ -271,19 +270,13 @@ void MqttCtrlClass::setWarehouseRequest(uint8_t offset) //offest < 30
   warehouse_request_addr = 2 + (144 * offset);
 }
 
-void MqttCtrlClass::setWarehouseBuffer(uint8_t *buf, uint8_t length)
-{
-  //warehouse_buffer = buf;
-  warehouse_buffer_length = length;
-}
-
-int MqttCtrlClass::warehouseRequestBufferUpdate()
+int MqttCtrlClass::warehouseRequestBufferUpdate(int *buf, uint8_t length)
 {
   cJSON *root;
   root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_UPDATE");
   cJSON_AddNumberToObject(root, "offset", (warehouse_request_addr - 2) / 144);
-  cJSON_AddItemToObject(root, "value", cJSON_CreateIntArray(warehouse_buffer, warehouse_buffer_length));
+  cJSON_AddItemToObject(root, "value", cJSON_CreateIntArray(buf, length));
 
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
   cJSON_Delete(root);

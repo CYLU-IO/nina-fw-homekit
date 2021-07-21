@@ -40,9 +40,7 @@ class MqttCtrlClass
 private:
   static esp_mqtt_client_handle_t client;
 
-  int warehouse_available_length;
-  int *warehouse_buffer;
-  int warehouse_buffer_length;
+  uint16_t warehouse_available_length;
 
 public:
   int warehouse_request_addr;
@@ -67,9 +65,8 @@ public:
   void setWarehouseLength(uint16_t length);
 
   void setWarehouseRequest(uint8_t offset);
-  void setWarehouseBuffer(uint8_t *buf, uint8_t length);
 
-  int warehouseRequestBufferUpdate();
+  int warehouseRequestBufferUpdate(int *buf, uint8_t length);
 };
 
 extern MqttCtrlClass MqttCtrl;
