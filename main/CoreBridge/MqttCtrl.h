@@ -18,6 +18,7 @@
 #define MQTT_DATA_MODULES_DATA 0x66
 #define MQTT_DATA_SWITCH_STATE 0x67
 #define MQTT_DATA_PRIORITY 0x68
+#define MQTT_DATA_HISTORY_LENGTH 0x69
 
 #define MQTT_CONFIG_DEVICE_NAME 0x70
 #define MQTT_CONFIG_ENABLE_POP 0x71
@@ -40,10 +41,9 @@ class MqttCtrlClass
 private:
   static esp_mqtt_client_handle_t client;
 
-  uint16_t warehouse_available_length;
-
 public:
-  int warehouse_request_addr;
+  int warehouse_request;
+  int warehouse_available_length;
 
   MqttCtrlClass();
 
@@ -62,10 +62,9 @@ public:
   int configurationsUpdate();
 
   void requestWarehouseLength();
-  void setWarehouseLength(uint16_t length);
+  void setWarehousePageRequest(uint8_t page);
 
-  void setWarehouseRequest(uint8_t offset);
-
+  int warehouseAvailableLengthUpdate(uint16_t length);
   int warehouseRequestBufferUpdate(int *buf, uint8_t length);
 };
 

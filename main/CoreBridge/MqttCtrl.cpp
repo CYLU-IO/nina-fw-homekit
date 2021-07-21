@@ -74,6 +74,14 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         case MQTT_DATA_CONFIGURATIONS:
           MqttCtrl.configurationsUpdate();
           break;
+
+        case MQTT_DATA_HISTORY_LENGTH:
+          MqttCtrl.requestWarehouseLength();
+          break;
+
+        case MQTT_DATA_CURRENT_HISTORY:
+          MqttCtrl.setWarehousePageRequest(event->data[4]);
+          break;
         }
         break;
 
@@ -149,7 +157,7 @@ MqttCtrlClass::MqttCtrlClass()
   esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
 
   s_mqttctrl_status = MQC_IDLE_STATUS;
-  warehouse_request_addr = 0x00;
+  warehouse_request = 0x00;
 }
 
 void MqttCtrlClass::begin()
@@ -250,24 +258,24 @@ int MqttCtrlClass::configurationsUpdate()
 
 void MqttCtrlClass::requestWarehouseLength()
 {
-  warehouse_request_addr = 0x01; //represent asking the length
+  warehouse_request = 0x01; //request available length
 }
 
-void MqttCtrlClass::setWarehouseLength(uint16_t length)
+void MqttCtrlClass::setWarehousePageRequest(uint8_t page)
 {
-  warehouse_available_length = length;
+  warehouse_request = 0x02 + page; //request page
 }
 
-void MqttCtrlClass::setWarehouseRequest(uint8_t offset) //offest < 30
+int MqttCtrlClass::warehouseAvailableLengthUpdate(uint16_t length)
 {
-  /**
-   * A day of data as one pack, so the offest unit is day
-   **/
+  cJSON *root;
+  root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_LENGTH_UPDATE");
+  cJSON_AddNumberToObject(root, "length", length);
 
-  if (offset >= 30)
-    offset = 30;
-
-  warehouse_request_addr = 2 + (144 * offset);
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  cJSON_Delete(root);
+  return ret;
 }
 
 int MqttCtrlClass::warehouseRequestBufferUpdate(int *buf, uint8_t length)
@@ -275,7 +283,6 @@ int MqttCtrlClass::warehouseRequestBufferUpdate(int *buf, uint8_t length)
   cJSON *root;
   root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_UPDATE");
-  cJSON_AddNumberToObject(root, "offset", (warehouse_request_addr - 2) / 144);
   cJSON_AddItemToObject(root, "value", cJSON_CreateIntArray(buf, length));
 
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);

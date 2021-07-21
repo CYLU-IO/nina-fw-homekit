@@ -164,17 +164,13 @@ int readModuleTriggered(const uint8_t command[], uint8_t response[])
 
 int readWarehouseRequest(const uint8_t command[], uint8_t response[])
 {
-  //int request_addr = MqttCtrl.warehouse_request_addr;
-  int request_addr = 0x02;
-
   response[2] = 1; // number of parameters
-  response[3] = 2; // parameter 1 length
-  response[4] = request_addr & 0xff;
-  response[5] = (request_addr >> 8) & 0xff;
+  response[3] = 1; // parameter 1 length
+  response[4] = MqttCtrl.warehouse_request;
 
-  MqttCtrl.warehouse_request_addr = 0x00;
+  MqttCtrl.warehouse_request = 0x00;
 
-  return 7;
+  return 6;
 }
 
 int setWarehouseLength(const uint8_t command[], uint8_t response[])
@@ -185,22 +181,25 @@ int setWarehouseLength(const uint8_t command[], uint8_t response[])
   response[3] = 1; // parameter 1 length
   response[4] = 1;
 
-  MqttCtrl.setWarehouseLength(value);
+  MqttCtrl.warehouseAvailableLengthUpdate(value);
+  MqttCtrl.warehouse_available_length = value;
 
   return 6;
 }
 
 int setWarehouseBuffer(const uint8_t command[], uint8_t response[])
 {
-  uint16_t length = (command[3] & 0xff00) << 8 | (command[4] & 0xff);
+  uint16_t length = ((command[3] << 8) & 0xff00) | (command[4] & 0xff);
 
   printf("Buffer length: %i\n", length);
 
   int *warehouseBuffer = (int *)malloc(length / 2 * sizeof(int));
 
+  printf("Printing buffer\n");
   for (int i = 0; i < length / 2; i++)
   {
-    warehouseBuffer[i] = (command[5 + (i * 2)] & 0xff) | (command[6 +(i * 2)] << 8);
+    warehouseBuffer[i] = (command[5 + (i * 2)] & 0xff) | ((command[6 +(i * 2)] << 8) & 0xff);
+    printf("%i\n", warehouseBuffer[i]);
   }
 
   MqttCtrl.warehouseRequestBufferUpdate(warehouseBuffer, length / 2);
