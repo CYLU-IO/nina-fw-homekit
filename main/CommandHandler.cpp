@@ -191,15 +191,11 @@ int setWarehouseBuffer(const uint8_t command[], uint8_t response[])
 {
   uint16_t length = ((command[3] << 8) & 0xff00) | (command[4] & 0xff);
 
-  printf("Buffer length: %i\n", length);
-
   int *warehouseBuffer = (int *)malloc(length / 2 * sizeof(int));
 
-  printf("Printing buffer\n");
   for (int i = 0; i < length / 2; i++)
   {
-    warehouseBuffer[i] = (command[5 + (i * 2)] & 0xff) | ((command[6 +(i * 2)] << 8) & 0xff);
-    printf("%i\n", warehouseBuffer[i]);
+    warehouseBuffer[i] = (command[5 + (i * 2)] & 0xff | (command[6 +(i * 2)] << 8) & 0xff00);
   }
 
   MqttCtrl.warehouseRequestBufferUpdate(warehouseBuffer, length / 2);
