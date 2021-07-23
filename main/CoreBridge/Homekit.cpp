@@ -100,7 +100,6 @@ int HomekitClass::beginAccessory()
 
   if (first)
   {
-
     ret = hap_start();
     first = false;
   }

@@ -69,8 +69,7 @@ int CoreBridgeClass::setEnablePOP(uint8_t state)
 
 int CoreBridgeClass::createAccessory()
 {
-  if (this->countAccessory() > 0)
-    this->deleteAccessory();
+  this->deleteAccessory();
 
   return Homekit.createAccessory(serial_number, device_name);
 }
@@ -82,7 +81,9 @@ int CoreBridgeClass::countAccessory()
 
 int CoreBridgeClass::deleteAccessory()
 {
-  Homekit.deleteAccessory();
+  if (this->countAccessory() > 0)
+    Homekit.deleteAccessory();
+
   num_modules = 0;
 
   return ESP_OK;

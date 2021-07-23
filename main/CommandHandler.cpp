@@ -82,6 +82,8 @@ int beginAccessory(const uint8_t command[], uint8_t response[])
   response[3] = 1; // parameter 1 length
   response[4] = CoreBridge.beginHomekit();
 
+  MqttCtrl.modulesUpdate();
+
   return 6;
 }
 
@@ -131,7 +133,7 @@ int getModuleSwitchState(const uint8_t command[], uint8_t response[])
 int setModuleCurrent(const uint8_t command[], uint8_t response[])
 {
   uint8_t index = command[4];
-  uint16_t value = (command[6] & 0xff) | (command[8] << 8);
+  uint16_t value = (command[7] & 0xff | (command[8] << 8) & 0xff00);
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
@@ -175,7 +177,7 @@ int readWarehouseRequest(const uint8_t command[], uint8_t response[])
 
 int setWarehouseLength(const uint8_t command[], uint8_t response[])
 {
-  uint16_t value = (command[4] & 0xff) | (command[6] << 8);
+  uint16_t value = (command[5] & 0xff | (command[6] << 8) & 0xff00);;
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length

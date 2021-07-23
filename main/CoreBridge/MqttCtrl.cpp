@@ -187,6 +187,8 @@ int MqttCtrlClass::stop()
 
 int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, int value)
 {
+  if (s_mqttctrl_status != MQC_CONNECTED) return ESP_FAIL;
+
   cJSON *root;
   root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "MODULE_UPDATE");
@@ -201,6 +203,8 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, int value)
 
 int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, const char *value)
 {
+  if (s_mqttctrl_status != MQC_CONNECTED) return ESP_FAIL;
+
   cJSON *root;
   root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "MODULE_UPDATE");
@@ -215,6 +219,8 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char *name, const char *val
 
 int MqttCtrlClass::modulesUpdate()
 {
+  if (s_mqttctrl_status != MQC_CONNECTED) return ESP_FAIL;
+
   cJSON *root;
   root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "MODULES_UPDATE");
@@ -243,6 +249,8 @@ int MqttCtrlClass::modulesUpdate()
 
 int MqttCtrlClass::configurationsUpdate()
 {
+  if (s_mqttctrl_status != MQC_CONNECTED) return ESP_FAIL;
+
   cJSON *root;
   root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "CONFIGURATIONS_UPDATE");
@@ -268,6 +276,8 @@ void MqttCtrlClass::setWarehousePageRequest(uint8_t page)
 
 int MqttCtrlClass::warehouseAvailableLengthUpdate(uint16_t length)
 {
+  if (s_mqttctrl_status != MQC_CONNECTED) return ESP_FAIL;
+  
   cJSON *root;
   root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_LENGTH_UPDATE");
@@ -280,6 +290,8 @@ int MqttCtrlClass::warehouseAvailableLengthUpdate(uint16_t length)
 
 int MqttCtrlClass::warehouseRequestBufferUpdate(int *buf, uint8_t length)
 {
+  if (s_mqttctrl_status != MQC_CONNECTED) return ESP_FAIL;
+
   cJSON *root;
   root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_UPDATE");

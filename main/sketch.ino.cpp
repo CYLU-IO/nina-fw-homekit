@@ -35,10 +35,10 @@ void setup()
 
   CoreBridge.init();
 
-  CoreBridge.createAccessory();
+  /*CoreBridge.createAccessory();
   CoreBridge.addModule(1, "Switch 2", 0, 1, 0);
   CoreBridge.addModule(0, "Switch 1", 0, 1, 0);
-  CoreBridge.beginHomekit();
+  CoreBridge.beginHomekit();*/
   //CoreBridge.setModuleValue(0, 1);
 }
 
