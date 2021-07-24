@@ -164,32 +164,7 @@ int readModuleTriggered(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int readWarehouseRequest(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = MqttCtrl.warehouse_request;
-
-  MqttCtrl.warehouse_request = 0x00;
-
-  return 6;
-}
-
-int setWarehouseLength(const uint8_t command[], uint8_t response[])
-{
-  uint16_t value = (command[5] & 0xff | (command[6] << 8) & 0xff00);;
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = 1;
-
-  MqttCtrl.warehouseAvailableLengthUpdate(value);
-  MqttCtrl.warehouse_available_length = value;
-
-  return 6;
-}
-
-int setWarehouseBuffer(const uint8_t command[], uint8_t response[])
+int pushWarehouseBuffer(const uint8_t command[], uint8_t response[])
 {
   uint16_t length = ((command[3] << 8) & 0xff00) | (command[4] & 0xff);
 
@@ -650,7 +625,7 @@ const CommandHandlerType commandHandlers[] = {
     setModuleCurrent,
     getModulePrioirty,
     readModuleTriggered,
-    setWarehouseBuffer,
+    NULL,
     NULL,
     NULL,
     NULL,
@@ -659,9 +634,9 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
 
     // 0x30 -> 0x3f
-    readWarehouseRequest,
-    setWarehouseLength,
-    setWarehouseBuffer,
+    pushWarehouseBuffer,
+    NULL,
+    NULL,
     NULL,
     NULL,
     NULL,

@@ -49,6 +49,7 @@ void CoreBridgeClass::init()
 {
   Homekit.init();
   WifiMgr.begin();
+  Warehouse.begin();
 }
 
 int CoreBridgeClass::setDeviceName(const char *name)

@@ -42,9 +42,6 @@ private:
   static esp_mqtt_client_handle_t client;
 
 public:
-  int warehouse_request;
-  int warehouse_available_length;
-
   MqttCtrlClass();
 
   void begin();
@@ -60,9 +57,6 @@ public:
   int modulesUpdate();
 
   int configurationsUpdate();
-
-  void requestWarehouseLength();
-  void setWarehousePageRequest(uint8_t page);
 
   int warehouseAvailableLengthUpdate(uint16_t length);
   int warehouseRequestBufferUpdate(int *buf, uint8_t length);
