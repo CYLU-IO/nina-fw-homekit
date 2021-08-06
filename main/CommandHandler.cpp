@@ -1,20 +1,164 @@
 #include <lwip/sockets.h>
 #include "esp_log.h"
 
+#include "cJSON.h"
+
 #include <Arduino.h>
 #include "CommandHandler.h"
 #include "CoreBridge/CoreBridge.h"
 
+static uartMsgQueue queue;
+
 int uartReceive(const uint8_t command[], uint8_t response[])
 {
-  uint16_t length = ((command[3] << 8) & 0xff00) | (command[4] & 0xff);
+  uint8_t port = command[4];
+  uint16_t length = ((command[5] << 8) & 0xff00) | (command[6] & 0xff);
 
-  printf("LENGTH: %i\n", length);
+  char *payload = (char *)calloc(length, sizeof(char));
+  memcpy(payload, &command[8], length - 1);
 
-  char *payload = (char *)calloc(length + 1, sizeof(char));
-  memcpy(payload, &command[5], length);
+  switch (command[7])
+  {
+  case CMD_REQ_ADR:
+  {
+    char *p = (char *)calloc(2, sizeof(char));
 
-  printf("DATA: %s\n", payload);
+    p[0] = CMD_LOAD_MODULE;
+    p[1] = 0x00;
+    queue.push(1, 2, p);
+    break;
+  }
+
+  case CMD_LINK_MODULE:
+  {
+    cJSON *data = cJSON_Parse(payload);
+
+    if (data == NULL)
+    {
+      printf("Json parsing failed.\n");
+      char *p = (char *)calloc(2, sizeof(char));
+
+      p[0] = CMD_LOAD_MODULE;
+      p[1] = 0x00;
+      queue.push(1, 2, p);
+      break;
+    }
+
+    int totalModules = cJSON_GetObjectItemCaseSensitive(data, "total")->valuedouble;
+    int index = cJSON_GetObjectItemCaseSensitive(data, "addr")->valuedouble - 1;
+
+    //digitalWrite(MODULES_STATE_PIN, LOW);
+
+    if (index + 1 == totalModules) //first module arrives
+    {
+      //sys_status.module_initialized = false;
+      CoreBridge.createAccessory();
+    }
+
+    //printf("index: %i\n", index);
+    CoreBridge.addModule(index,
+                         cJSON_GetObjectItemCaseSensitive(data, "name")->valuestring,
+                         0, //type
+                         cJSON_GetObjectItemCaseSensitive(data, "pri")->valuedouble,
+                         cJSON_GetObjectItemCaseSensitive(data, "switch_state")->valuedouble);
+
+    if (index == 0)
+    {
+      //sys_status.num_modules = updateNumModule;
+      //printf("[UART] Total modules: %i\n", totalModules);
+
+      ///// Initialize connected modules /////
+      char *p = (char *)calloc(totalModules + 1, sizeof(char));
+
+      p[0] = CMD_INIT_MODULE;
+      for (int i = 1; i <= totalModules; i++)
+        p[i] = i;
+      queue.push(3, totalModules + 1, p);
+
+      /// Initially Update Module Current /////
+      p = (char *)calloc(1, sizeof(char));
+
+      p[0] = MODULE_CURRENT;
+      queue.push(3, 1, p);
+
+      ///// Start Homekit Service /////
+      CoreBridge.beginHomekit();
+      MqttCtrl.modulesUpdate();
+
+      //digitalWrite(MODULES_STATE_PIN, HIGH);
+      //sys_status.module_initialized = true;
+      //sys_status.module_connected = true;
+    }
+    break;
+  }
+
+  case CMD_HI:
+  {
+    //sys_status.module_connected = true;
+    break;
+  }
+  case CMD_UPDATE_DATA:
+  {
+    int addr = payload[0];
+    int value = payload[2] & 0xff | payload[3] << 8;
+
+    switch (payload[1])
+    {
+    case MODULE_SWITCH_STATE:
+    {
+      printf("[UART] Module %i state changes to %i\n", addr, value);
+      CoreBridge.setModuleSwitchState(addr - 1, value);
+      break;
+    }
+
+      /*case MODULE_PRIORITY: {
+            #if DEBUG
+              Serial.print("[UART] Module ");
+              Serial.print(addr);
+              Serial.print(" priority changes to ");
+              Serial.println(value);
+            #endif
+              sys_status.modules[addr - 1][0] = value;
+              break;
+            }*/
+
+    case MODULE_CURRENT:
+    {
+      printf("[UART] Module %i current updates to %i\n", addr, value);
+
+      ///// Check MCUB Triggering /////
+      /*if (value >= sys_status.modules[addr - 1][2] + smf_status.mcub)
+      {
+        smf_status.overload_triggered_addr = addr;
+        smfCheckRoutine();
+
+        printf("[SMF] MCUB Triggered by module %i\n", addr);
+      }*/
+
+      ///// Update module current data /////
+      CoreBridge.setModuleCurrent(addr - 1, value);
+
+      ///// Update MCUB /////
+      /*int sum = 0;
+      for (int i = 0; i < sys_status.num_modules; i++)
+        sum += sys_status.modules[i][2];
+      sys_status.sum_current = sum;
+
+      int mcub = (MAX_CURRENT - sum) / sys_status.num_modules;
+      mcub = (mcub >= 0) ? mcub : 0;
+      smf_status.mcub = mcub;
+
+      int a[1] = {0};
+      int v[1] = {mcub};
+      sendUpdateData(Serial3, MODULE_MCUB, a, v, 1);
+
+      printf("[SMF] Update MCUB: %i\n", smf_status.mcub);*/
+      break;
+    }
+    }
+    break;
+  }
+  }
 
   free(payload);
 
@@ -27,15 +171,24 @@ int uartReceive(const uint8_t command[], uint8_t response[])
 
 int uartTransmit(const uint8_t command[], uint8_t response[])
 {
-  response[2] = 2; // number of parameters
-  response[3] = 0x00; // parameter 1 length(H)
-  response[4] = 0x01; // parameter 1 length(L)
-  response[5] = 1; //port
-  response[6] = 0x00; // parameter 2 length(H)
-  response[7] = 0x01; // parameter 2 length(L)
-  response[8] = 0x51;
-  
-  return 10;
+  uart_msg_pack *pack = (!queue.isEmpty()) ? queue.pop() : new uart_msg_pack(255, 0, NULL);
+
+  int length = pack->length;
+
+  response[2] = 2;             // number of parameters
+  response[3] = 0x00;          // parameter 1 length(H)
+  response[4] = 0x01;          // parameter 1 length(L)
+  response[5] = pack->port;    //port
+  response[6] = length >> 8;   // parameter 2 length(H)
+  response[7] = length & 0xff; // parameter 2 length(L)
+
+  for (int i = 0; i < length; i++)
+    response[8 + i] = pack->payload[i];
+
+  free(pack->payload);
+  delete pack;
+
+  return 9 + length;
 }
 /*
 int corebridge_getFreeHeap(const uint8_t command[], uint8_t response[])
@@ -88,51 +241,11 @@ int resetToFactory(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int createAccessory(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.createAccessory();
-
-  return 6;
-}
-
 int countAccessory(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length
   response[4] = CoreBridge.countAccessory();
-
-  return 6;
-}
-
-int beginAccessory(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.beginHomekit();
-
-  MqttCtrl.modulesUpdate();
-
-  return 6;
-}
-
-int addModule(const uint8_t command[], uint8_t response[])
-{
-  char name[25 + 1];
-
-  uint8_t index = command[4];
-  uint8_t type = command[6];
-  uint8_t priority = command[8];
-  uint8_t state = command[10];
-
-
-  memset(name, 0x00, sizeof(name));
-  memcpy(name, &command[12], command[11]);
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.addModule(index, name, type, priority, state);
 
   return 6;
 }
@@ -214,6 +327,45 @@ int pushWarehouseBuffer(const uint8_t command[], uint8_t response[])
 
   return 6;
 }*/
+
+void uartMsgQueue::push(int po, int l, char *p)
+{
+  if (isEmpty())
+  {
+    front = new uart_msg_pack(po, l, p);
+    back = front;
+    size++;
+
+    return;
+  }
+
+  uart_msg_pack *newPack = new uart_msg_pack(po, l, p);
+  back->next = newPack;
+  back = newPack; // update back pointer
+  size++;
+}
+
+uart_msg_pack *uartMsgQueue::pop()
+{
+  if (isEmpty())
+    return NULL;
+
+  uart_msg_pack *pack = front;
+  front = front->next; // update front pointer
+  size--;
+
+  return pack;
+}
+
+bool uartMsgQueue::isEmpty()
+{
+  return ((front && back) == 0);
+}
+
+int uartMsgQueue::getSize()
+{
+  return size;
+}
 
 typedef int (*CommandHandlerType)(const uint8_t command[], uint8_t response[]);
 
