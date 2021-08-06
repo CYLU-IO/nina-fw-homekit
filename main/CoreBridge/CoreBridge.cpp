@@ -102,7 +102,6 @@ int CoreBridgeClass::addModule(uint8_t index, const char *name, uint8_t type, ui
   modules[index].current = 0;
   modules[index].priority = priority;
   modules[index].state = state;
-  modules[index].event_triggered = false;
   num_modules++;
 
   return ESP_OK;
@@ -112,15 +111,8 @@ int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state, bool tri
 {
   modules[index].state = state;
 
-  if (trigger)
-  {
-    modules[index].event_triggered = true;
-  }
-  else
-  {
-    Homekit.setServiceValue((hap_char_t *)modules[index].hc, state);
-    MqttCtrl.moduleUpdate(index, "switch_state", state);
-  }
+  Homekit.setServiceValue((hap_char_t *)modules[index].hc, state);
+  MqttCtrl.moduleUpdate(index, "switch_state", state);
 
   return ESP_OK;
 }
@@ -128,11 +120,6 @@ int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state, bool tri
 int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state)
 {
   return this->setModuleSwitchState(index, state, true);
-}
-
-int CoreBridgeClass::getModuleSwitchState(uint8_t index)
-{
-  return modules[index].state;
 }
 
 int CoreBridgeClass::setModuleCurrent(uint8_t index, uint16_t value)
@@ -151,19 +138,6 @@ int CoreBridgeClass::setModulePrioirty(uint8_t index, uint8_t value)
   MqttCtrl.moduleUpdate(index, "priority", value);
 
   return ESP_OK;
-}
-
-int CoreBridgeClass::getModulePrioirty(uint8_t index)
-{
-  return modules[index].priority;
-}
-
-int CoreBridgeClass::readModuleTriggered(uint8_t index)
-{
-  bool b = modules[index].event_triggered;
-  modules[index].event_triggered = false; //clean after response
-
-  return (int)b;
 }
 
 int CoreBridgeClass::getModuleNum()

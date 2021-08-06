@@ -29,15 +29,13 @@ void setup()
   responseBuffer = (uint8_t *)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
   CommandHandler.begin();
 
-  /*CoreBridge.init();
+  CoreBridge.init();
 
-  CoreBridge.createAccessory();
+  /*CoreBridge.createAccessory();
   CoreBridge.addModule(1, "Switch 2", 0, 1, 0);
   CoreBridge.addModule(0, "Switch 1", 0, 1, 0);
   CoreBridge.beginHomekit();*/
   //CoreBridge.setModuleValue(0, 1);
-
-  printf("NINA Begins\n");
 }
 
 void loop()

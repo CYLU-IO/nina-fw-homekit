@@ -21,7 +21,6 @@ typedef struct
   hap_serv_t *hs;
   hap_char_t *hc;
   bool state;
-  bool event_triggered;
 } module_t;
 
 class CoreBridgeClass
@@ -53,14 +52,9 @@ public:
 
   int setModuleSwitchState(uint8_t index, uint8_t state, bool trigger);
   int setModuleSwitchState(uint8_t index, uint8_t state);
-  int getModuleSwitchState(uint8_t index);
-
   int setModuleCurrent(uint8_t index, uint16_t value);
 
   int setModulePrioirty(uint8_t index, uint8_t value);
-  int getModulePrioirty(uint8_t index);
-
-  int readModuleTriggered(uint8_t index);
 
   int getModuleNum();
   module_t *getModule(uint8_t index);
