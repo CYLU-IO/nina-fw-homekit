@@ -9,8 +9,8 @@
 #include "Warehouse.h"
 
 #define SERIAL_NUMBER_LENGTH 12
-#define DEVICE_NAME_LENGTH   32
-#define MAX_MODULE_NUM       20
+#define DEVICE_NAME_LENGTH 32
+#define MAX_MODULE_NUM 20
 
 typedef struct
 {
@@ -23,6 +23,21 @@ typedef struct
   bool state;
 } module_t;
 
+typedef struct
+{
+  int mcub;
+  int overload_triggered_addr;
+  bool emerg_triggered;
+} smart_modularized_fuse_status_t;
+
+typedef struct
+{
+  int num_modules;
+  int sum_current;
+  bool module_initialized;
+  bool module_connected;
+} system_status_t;
+
 class CoreBridgeClass
 {
 
@@ -33,7 +48,8 @@ public:
   uint8_t enable_pop;
 
   static module_t modules[MAX_MODULE_NUM];
-  static int num_modules;
+  static system_status_t system_status;
+  static smart_modularized_fuse_status_t smf_status;
 
   CoreBridgeClass();
 
@@ -42,11 +58,12 @@ public:
   int setDeviceName(const char *name);
   int setEnablePOP(uint8_t state);
 
-  /*** Homekit ***/
+  ///// Homekit /////
   int createAccessory();
   int countAccessory();
   int deleteAccessory();
   int beginHomekit();
+  ///////////////////
 
   int addModule(uint8_t index, const char *name, uint8_t type, uint8_t priority, uint8_t state);
 

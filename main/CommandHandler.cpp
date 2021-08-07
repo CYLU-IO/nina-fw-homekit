@@ -51,11 +51,10 @@ int uartReceive(const uint8_t command[], uint8_t response[])
 
     if (index + 1 == totalModules) //first module arrives
     {
-      //sys_status.module_initialized = false;
+      CoreBridge.system_status.module_initialized = false;
       CoreBridge.createAccessory();
     }
 
-    //printf("index: %i\n", index);
     CoreBridge.addModule(index,
                          cJSON_GetObjectItemCaseSensitive(data, "name")->valuestring,
                          0, //type
@@ -64,7 +63,6 @@ int uartReceive(const uint8_t command[], uint8_t response[])
 
     if (index == 0)
     {
-      //sys_status.num_modules = updateNumModule;
       //printf("[UART] Total modules: %i\n", totalModules);
 
       ///// Initialize connected modules /////
@@ -75,7 +73,7 @@ int uartReceive(const uint8_t command[], uint8_t response[])
         p[i] = i;
       queue.push(3, totalModules + 1, p);
 
-      /// Initially Update Module Current /////
+      ///// Initially Update Module Current /////
       p = (char *)calloc(1, sizeof(char));
 
       p[0] = MODULE_CURRENT;
@@ -86,15 +84,15 @@ int uartReceive(const uint8_t command[], uint8_t response[])
       MqttCtrl.modulesUpdate();
 
       //digitalWrite(MODULES_STATE_PIN, HIGH);
-      //sys_status.module_initialized = true;
-      //sys_status.module_connected = true;
+      CoreBridge.system_status.module_initialized = true;
+      CoreBridge.system_status.module_connected = true;
     }
     break;
   }
 
   case CMD_HI:
   {
-    //sys_status.module_connected = true;
+    CoreBridge.system_status.module_connected = true;
     break;
   }
   case CMD_UPDATE_DATA:
@@ -200,15 +198,6 @@ int corebridge_getFreeHeap(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
-int corebridge_getEnablePOP(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.enable_pop;
-
-  return 6;
-}
-
 int wifimgr_getStatus(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
@@ -237,72 +226,6 @@ int resetToFactory(const uint8_t command[], uint8_t response[])
 
   nvs_flash_erase();
   esp_restart();
-
-  return 6;
-}
-
-int countAccessory(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.countAccessory();
-
-  return 6;
-}
-
-int setModuleSwitchState(const uint8_t command[], uint8_t response[])
-{
-  uint8_t index = command[4];
-  uint8_t state = command[6];
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.setModuleSwitchState(index, state, false);
-
-  return 6;
-}
-
-int getModuleSwitchState(const uint8_t command[], uint8_t response[])
-{
-  uint8_t index = command[4];
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.getModuleSwitchState(index);
-
-  return 6;
-}
-
-int setModuleCurrent(const uint8_t command[], uint8_t response[])
-{
-  uint8_t index = command[4];
-  uint16_t value = (command[7] & 0xff | (command[8] << 8) & 0xff00);
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.setModuleCurrent(index, value);
-
-  return 6;
-}
-
-int getModulePrioirty(const uint8_t command[], uint8_t response[])
-{
-  uint8_t index = command[4];
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.getModulePrioirty(index);
-
-  return 6;
-}
-
-int readModuleTriggered(const uint8_t command[], uint8_t response[])
-{
-  uint8_t index = command[4];
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = CoreBridge.readModuleTriggered(index);
 
   return 6;
 }
