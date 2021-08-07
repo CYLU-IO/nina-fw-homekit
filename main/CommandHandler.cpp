@@ -7,7 +7,7 @@
 #include "CommandHandler.h"
 #include "CoreBridge/CoreBridge.h"
 
-static uartMsgQueue queue;
+uartMsgQueue queue;
 
 int uartReceive(const uint8_t command[], uint8_t response[])
 {
@@ -21,10 +21,7 @@ int uartReceive(const uint8_t command[], uint8_t response[])
   {
   case CMD_REQ_ADR:
   {
-    char *p = (char *)calloc(2, sizeof(char));
-
-    p[0] = CMD_LOAD_MODULE;
-    p[1] = 0x00;
+    char *p = new char[2]{CMD_LOAD_MODULE, 0x00};
     queue.push(1, 2, p);
     break;
   }
@@ -36,10 +33,7 @@ int uartReceive(const uint8_t command[], uint8_t response[])
     if (data == NULL)
     {
       printf("Json parsing failed.\n");
-      char *p = (char *)calloc(2, sizeof(char));
-
-      p[0] = CMD_LOAD_MODULE;
-      p[1] = 0x00;
+      char *p = new char[2]{CMD_LOAD_MODULE, 0x00};
       queue.push(1, 2, p);
       break;
     }
@@ -52,7 +46,8 @@ int uartReceive(const uint8_t command[], uint8_t response[])
     if (index + 1 == totalModules) //first module arrives
     {
       CoreBridge.system_status.module_initialized = false;
-      CoreBridge.createAccessory();
+      CoreBridge.removeModules();
+      Homekit.createAccessory(CoreBridge.serial_number, CoreBridge.device_name);
     }
 
     CoreBridge.addModule(index,
@@ -63,24 +58,18 @@ int uartReceive(const uint8_t command[], uint8_t response[])
 
     if (index == 0)
     {
-      //printf("[UART] Total modules: %i\n", totalModules);
-
+      printf("[UART] Total modules: %i\n", totalModules);
       ///// Initialize connected modules /////
-      char *p = (char *)calloc(totalModules + 1, sizeof(char));
-
-      p[0] = CMD_INIT_MODULE;
+      char *p = new char[totalModules + 1]{CMD_INIT_MODULE};
       for (int i = 1; i <= totalModules; i++)
         p[i] = i;
       queue.push(3, totalModules + 1, p);
 
       ///// Initially Update Module Current /////
-      p = (char *)calloc(1, sizeof(char));
+      CoreBridge.requestModulesData(MODULE_CURRENT);
 
-      p[0] = MODULE_CURRENT;
-      queue.push(3, 1, p);
-
-      ///// Start Homekit Service /////
-      CoreBridge.beginHomekit();
+      ///// Start Online Service /////
+      Homekit.beginAccessory();
       MqttCtrl.modulesUpdate();
 
       //digitalWrite(MODULES_STATE_PIN, HIGH);
@@ -123,34 +112,34 @@ int uartReceive(const uint8_t command[], uint8_t response[])
     case MODULE_CURRENT:
     {
       printf("[UART] Module %i current updates to %i\n", addr, value);
-
       ///// Check MCUB Triggering /////
-      /*if (value >= sys_status.modules[addr - 1][2] + smf_status.mcub)
+      if (value >= CoreBridge.getModule(addr - 1)->current + CoreBridge.smf_status.mcub)
       {
-        smf_status.overload_triggered_addr = addr;
-        smfCheckRoutine();
-
         printf("[SMF] MCUB Triggered by module %i\n", addr);
-      }*/
+        CoreBridge.smf_status.overload_triggered_addr = addr;
+        CoreBridge.overloadProtectionCheck();
+      }
 
       ///// Update module current data /////
       CoreBridge.setModuleCurrent(addr - 1, value);
 
+      ///// Update System Sum Current /////
+      int sum = 0;
+      for (int i = 0; i < CoreBridge.system_status.num_modules; i++)
+        sum += CoreBridge.getModule(i)->current;
+      CoreBridge.system_status.sum_current = sum;
+
       ///// Update MCUB /////
-      /*int sum = 0;
-      for (int i = 0; i < sys_status.num_modules; i++)
-        sum += sys_status.modules[i][2];
-      sys_status.sum_current = sum;
-
-      int mcub = (MAX_CURRENT - sum) / sys_status.num_modules;
+      int mcub = (MAX_CURRENT - sum) / CoreBridge.system_status.num_modules;
       mcub = (mcub >= 0) ? mcub : 0;
-      smf_status.mcub = mcub;
+      CoreBridge.smf_status.mcub = mcub;
 
-      int a[1] = {0};
-      int v[1] = {mcub};
-      sendUpdateData(Serial3, MODULE_MCUB, a, v, 1);
+      ////// Broadcast to Modules /////
+      uint8_t *addrs = new uint8_t[1]{0};
+      uint16_t *values = new uint16_t[1]{(uint16_t)mcub};
 
-      printf("[SMF] Update MCUB: %i\n", smf_status.mcub);*/
+      CoreBridge.updateModulesData(MODULE_MCUB, addrs, values, 1);
+      printf("[SMF] Update MCUB: %i\n", mcub);
       break;
     }
     }
@@ -183,41 +172,12 @@ int uartTransmit(const uint8_t command[], uint8_t response[])
   for (int i = 0; i < length; i++)
     response[8 + i] = pack->payload[i];
 
-  free(pack->payload);
+  delete pack->payload;
   delete pack;
 
   return 9 + length;
 }
 /*
-int corebridge_getFreeHeap(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = esp_get_free_heap_size();
-
-  return 6;
-}
-
-int wifimgr_getStatus(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = WifiMgr.getStatus();
-
-  return 6;
-}
-
-int resetNetwork(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = 1;
-
-  WifiMgr.resetNetwork();
-
-  return 6;
-}
-
 int resetToFactory(const uint8_t command[], uint8_t response[])
 {
   response[2] = 1; // number of parameters
@@ -251,6 +211,7 @@ int pushWarehouseBuffer(const uint8_t command[], uint8_t response[])
   return 6;
 }*/
 
+///// UART MSG Queue /////
 void uartMsgQueue::push(int po, int l, char *p)
 {
   if (isEmpty())
@@ -312,6 +273,7 @@ const CommandHandlerType commandHandlers[] = {
     NULL,
 };
 
+///// SPI Command Handler /////
 #define NUM_COMMAND_HANDLERS (sizeof(commandHandlers) / sizeof(commandHandlers[0]))
 
 CommandHandlerClass::CommandHandlerClass()

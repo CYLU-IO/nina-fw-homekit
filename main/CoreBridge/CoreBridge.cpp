@@ -5,6 +5,8 @@
 #include <Arduino.h>
 #include <hap.h>
 #include <hap_platform_keystore.h>
+
+#include "CommandHandler.h"
 #include "CoreBridge.h"
 
 #include "Homekit.h"
@@ -65,28 +67,6 @@ int CoreBridgeClass::setEnablePOP(uint8_t state)
   return ESP_OK;
 }
 
-int CoreBridgeClass::createAccessory()
-{
-  this->deleteAccessory();
-
-  return Homekit.createAccessory(serial_number, device_name);
-}
-
-int CoreBridgeClass::deleteAccessory()
-{
-  if (Homekit.countAccessory() > 0)
-    Homekit.deleteAccessory();
-
-  system_status.num_modules = 0;
-
-  return ESP_OK;
-}
-
-int CoreBridgeClass::beginHomekit()
-{
-  return Homekit.beginAccessory();
-}
-
 int CoreBridgeClass::addModule(uint8_t index, const char *name, uint8_t type, uint8_t priority, uint8_t state)
 {
   modules[index].name = strdup(name);
@@ -99,7 +79,59 @@ int CoreBridgeClass::addModule(uint8_t index, const char *name, uint8_t type, ui
   return ESP_OK;
 }
 
-int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state, bool trigger)
+int CoreBridgeClass::removeModules()
+{
+  if (Homekit.countAccessory() > 0)
+    Homekit.deleteAccessory();
+
+  system_status.num_modules = 0;
+
+  return ESP_OK;
+}
+
+int CoreBridgeClass::requestModulesData(uint8_t type)
+{
+  char *p = new char[2]{CMD_REQ_DATA, type};
+  queue.push(3, 2, p);
+
+  return ESP_OK;
+}
+
+int CoreBridgeClass::updateModulesData(uint8_t type, uint8_t *addrs, uint16_t* values, uint8_t length)
+{
+  char *p = new char[length * 3 + 2]{CMD_UPDATE_DATA, type};
+
+  for (int i = 0; i < length; i++) {
+    p[i * 3 + 2] = addrs[i];
+    p[i * 3 + 3] = values[i] & 0xff;
+    p[i * 3 + 4] = values[i] >> 8;
+  }
+  queue.push(3, length * 3 + 2, p);
+  delete addrs;
+  delete values;
+  
+  return ESP_OK;
+}
+
+int CoreBridgeClass::doModulesAction(uint8_t *addrs, uint8_t *actions, uint8_t length)
+{
+  int l = 2 * length + 1;
+  char *p = new char[l]{CMD_DO_MODULE};
+
+  for (int i = 0; i < l; i++)
+  {
+    p[i * 2 + 1] = addrs[i];
+    p[i * 2 + 2] = actions[i];
+  }
+
+  queue.push(3, l, p);
+  delete addrs;
+  delete actions;
+
+  return ESP_OK;
+}
+
+int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state)
 {
   modules[index].state = state;
 
@@ -107,11 +139,6 @@ int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state, bool tri
   MqttCtrl.moduleUpdate(index, "switch_state", state);
 
   return ESP_OK;
-}
-
-int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state)
-{
-  return this->setModuleSwitchState(index, state, true);
 }
 
 int CoreBridgeClass::setModuleCurrent(uint8_t index, uint16_t value)
@@ -140,6 +167,55 @@ int CoreBridgeClass::getModuleNum()
 module_t *CoreBridgeClass::getModule(uint8_t index)
 {
   return &modules[index];
+}
+
+void CoreBridgeClass::overloadProtectionCheck()
+{
+  static bool emerg_triggered;
+
+  if (system_status.sum_current > MAX_CURRENT)
+  {
+    if (!emerg_triggered)
+    {
+      ///// POP Protection Logic /////
+      if (enable_pop)
+      {
+        int highest_priority = 0;
+
+        for (int i = 0; i < system_status.num_modules; i++)
+        {
+          module_t *module = this->getModule(i);
+          if (module->state && module->priority >= highest_priority)
+          {
+            smf_status.overload_triggered_addr = i + 1;
+            highest_priority = module->priority;
+          }
+        }
+      }
+
+      ///// Execute Turn Off Action /////
+      printf("[SMF] Overloaded. Turning OFF: %i\n", smf_status.overload_triggered_addr);
+      uint8_t *addrs = new uint8_t[1]{(uint8_t)smf_status.overload_triggered_addr};
+      uint8_t *acts = new uint8_t[1]{DO_TURN_OFF};
+
+      CoreBridge.doModulesAction(addrs, acts, 1);
+      emerg_triggered = true;
+
+      return;
+    }
+
+    ///// Request Current per Second /////
+    static unsigned long t;
+    if (millis() - t > 1000)
+    {
+      this->requestModulesData(MODULE_CURRENT);
+      t = millis();
+    }
+
+    return;
+  }
+
+  emerg_triggered = false;
 }
 
 CoreBridgeClass CoreBridge;

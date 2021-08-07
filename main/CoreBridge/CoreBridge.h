@@ -11,6 +11,9 @@
 #define SERIAL_NUMBER_LENGTH 12
 #define DEVICE_NAME_LENGTH 32
 #define MAX_MODULE_NUM 20
+#define MAX_CURRENT 1500
+
+#define LIVE_DETECT_INTERVAL 1000
 
 typedef struct
 {
@@ -27,7 +30,6 @@ typedef struct
 {
   int mcub;
   int overload_triggered_addr;
-  bool emerg_triggered;
 } smart_modularized_fuse_status_t;
 
 typedef struct
@@ -58,23 +60,21 @@ public:
   int setDeviceName(const char *name);
   int setEnablePOP(uint8_t state);
 
-  ///// Homekit /////
-  int createAccessory();
-  int countAccessory();
-  int deleteAccessory();
-  int beginHomekit();
-  ///////////////////
-
   int addModule(uint8_t index, const char *name, uint8_t type, uint8_t priority, uint8_t state);
+  int removeModules();
 
-  int setModuleSwitchState(uint8_t index, uint8_t state, bool trigger);
+  int requestModulesData(u_int8_t type);
+  int updateModulesData(uint8_t type, uint8_t *addrs, uint16_t* values, uint8_t length);
+  int doModulesAction(uint8_t* addrs, uint8_t *actions, uint8_t length);
+
   int setModuleSwitchState(uint8_t index, uint8_t state);
   int setModuleCurrent(uint8_t index, uint16_t value);
-
   int setModulePrioirty(uint8_t index, uint8_t value);
 
   int getModuleNum();
   module_t *getModule(uint8_t index);
+
+  void overloadProtectionCheck();
 };
 
 extern CoreBridgeClass CoreBridge;

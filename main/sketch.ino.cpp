@@ -50,4 +50,8 @@ void loop()
   int responseLength = CommandHandler.handle(commandBuffer, responseBuffer);
 
   SPIS.transfer(responseBuffer, NULL, responseLength);
+
+  ///// Routine /////
+  CoreBridge.overloadProtectionCheck();
+  
 }

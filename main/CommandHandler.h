@@ -70,6 +70,8 @@ public:
   int getSize();
 };
 
+extern uartMsgQueue queue;
+
 class CommandHandlerClass
 {
 public:
