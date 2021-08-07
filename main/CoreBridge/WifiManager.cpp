@@ -13,8 +13,7 @@
 #include "esp_netif.h"
 #include "esp_smartconfig.h"
 
-#include "WifiManager.h"
-#include "MqttCtrl.h"
+#include "CoreBridge.h"
 
 static EventGroupHandle_t s_wifi_event_group;
 
@@ -43,13 +42,13 @@ void wifimgr_event_handler(void *arg, esp_event_base_t event_base,
     }
     else
     {
-      printf("[WifiMgr] Begin provision\n");
       xTaskCreate(smarconfig_task, "smarconfig_task", 4096, NULL, 3, NULL);
     }
   }
   else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
   {
     s_wifi_status = WL_DISCONNECTED;
+    CoreBridge.digitalWrite(WIFI_STATE_PIN, 0);
 
     esp_wifi_connect();
 
@@ -71,6 +70,7 @@ void wifimgr_event_handler(void *arg, esp_event_base_t event_base,
     s_retry_num = 0;
     s_wifi_status = WL_CONNECTED;
 
+    CoreBridge.digitalWrite(WIFI_STATE_PIN, 1);
     MqttCtrl.begin();
 
     xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
@@ -156,8 +156,6 @@ void WifiManager::begin()
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_start());
-
-  printf("[WifiMgr] Wifi Starts\n");
 
   s_wifi_status = WL_IDLE_STATUS;
 }

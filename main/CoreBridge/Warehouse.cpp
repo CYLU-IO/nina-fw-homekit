@@ -4,7 +4,6 @@
 #include <Wire.h>
 
 #include "CoreBridge.h"
-#include "Warehouse.h"
 
 void WarehouseClass::begin()
 {

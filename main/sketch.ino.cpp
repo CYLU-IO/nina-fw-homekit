@@ -24,12 +24,16 @@ uint8_t *responseBuffer;
 
 void setup()
 {
+  ///// SPI Initialization /////
   SPIS.begin();
   commandBuffer = (uint8_t *)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
   responseBuffer = (uint8_t *)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
   CommandHandler.begin();
 
+  ///// Service Initialization /////
   CoreBridge.init();
+  CoreBridge.digitalWrite(WIFI_STATE_PIN, 0);
+  CoreBridge.digitalWrite(MODULES_STATE_PIN, 0);
 
   /*CoreBridge.createAccessory();
   CoreBridge.addModule(1, "Switch 2", 0, 1, 0);
@@ -40,6 +44,7 @@ void setup()
 
 void loop()
 {
+  ///// SPI Handling /////
   memset(commandBuffer, 0x00, SPI_BUFFER_LEN);
   int commandLength = SPIS.transfer(NULL, commandBuffer, SPI_BUFFER_LEN);
 
@@ -53,5 +58,6 @@ void loop()
 
   ///// Routine /////
   CoreBridge.overloadProtectionCheck();
-  
+  CoreBridge.moduleLiveCheck();
+  CoreBridge.recordSumCurrent();
 }

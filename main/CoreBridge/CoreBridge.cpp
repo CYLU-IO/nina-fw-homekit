@@ -6,24 +6,14 @@
 #include <hap.h>
 #include <hap_platform_keystore.h>
 
-#include "CommandHandler.h"
 #include "CoreBridge.h"
 
-#include "Homekit.h"
-#include "MqttCtrl.h"
-#include "WifiManager.h"
-
 ///// Variables Definition /////
-module_t CoreBridgeClass::modules[MAX_MODULE_NUM];
 system_status_t CoreBridgeClass::system_status;
 smart_modularized_fuse_status_t CoreBridgeClass::smf_status;
 
 CoreBridgeClass::CoreBridgeClass()
 {
-  ///// Modules DB Initialization /////
-  //module_t *modules = (module_t *)malloc(MAX_MODULE_NUM * sizeof(module_t));
-  system_status.num_modules = 0;
-
   ///// Configuration Restoration /////
   memset(&serial_number, 0x00, sizeof(serial_number));
   memset(&device_name, 0x00, sizeof(device_name));
@@ -31,8 +21,8 @@ CoreBridgeClass::CoreBridgeClass()
   size_t size;
 
   //Enable POP
-  size = sizeof(enable_pop);
-  if (hap_platform_keystore_get(hap_platform_keystore_get_nvs_partition_name(), "configurations", "enable_pop", (uint8_t *)&enable_pop, &size) != HAP_SUCCESS)
+  size = sizeof(smf_status.enable_pop);
+  if (hap_platform_keystore_get(hap_platform_keystore_get_nvs_partition_name(), "configurations", "enable_pop", (uint8_t *)&smf_status.enable_pop, &size) != HAP_SUCCESS)
     this->setEnablePOP(0);
 
   //Device Name
@@ -61,8 +51,8 @@ int CoreBridgeClass::setDeviceName(const char *name)
 
 int CoreBridgeClass::setEnablePOP(uint8_t state)
 {
-  enable_pop = state;
-  hap_platform_keystore_set(hap_platform_keystore_get_nvs_partition_name(), "configurations", "enable_pop", (uint8_t *)&enable_pop, sizeof(enable_pop));
+  smf_status.enable_pop = state;
+  hap_platform_keystore_set(hap_platform_keystore_get_nvs_partition_name(), "configurations", "enable_pop", (uint8_t *)&smf_status.enable_pop, sizeof(smf_status.enable_pop));
 
   return ESP_OK;
 }
@@ -89,6 +79,14 @@ int CoreBridgeClass::removeModules()
   return ESP_OK;
 }
 
+int CoreBridgeClass::digitalWrite(uint8_t pin, uint8_t state)
+{
+  char *p = new char[2]{pin, state};
+  queue.push(254, 2, p);
+
+  return ESP_OK;
+}
+
 int CoreBridgeClass::requestModulesData(uint8_t type)
 {
   char *p = new char[2]{CMD_REQ_DATA, type};
@@ -97,11 +95,12 @@ int CoreBridgeClass::requestModulesData(uint8_t type)
   return ESP_OK;
 }
 
-int CoreBridgeClass::updateModulesData(uint8_t type, uint8_t *addrs, uint16_t* values, uint8_t length)
+int CoreBridgeClass::updateModulesData(uint8_t type, uint8_t *addrs, uint16_t *values, uint8_t length)
 {
   char *p = new char[length * 3 + 2]{CMD_UPDATE_DATA, type};
 
-  for (int i = 0; i < length; i++) {
+  for (int i = 0; i < length; i++)
+  {
     p[i * 3 + 2] = addrs[i];
     p[i * 3 + 3] = values[i] & 0xff;
     p[i * 3 + 4] = values[i] >> 8;
@@ -109,7 +108,7 @@ int CoreBridgeClass::updateModulesData(uint8_t type, uint8_t *addrs, uint16_t* v
   queue.push(3, length * 3 + 2, p);
   delete addrs;
   delete values;
-  
+
   return ESP_OK;
 }
 
@@ -178,7 +177,7 @@ void CoreBridgeClass::overloadProtectionCheck()
     if (!emerg_triggered)
     {
       ///// POP Protection Logic /////
-      if (enable_pop)
+      if (smf_status.enable_pop)
       {
         int highest_priority = 0;
 
@@ -216,6 +215,81 @@ void CoreBridgeClass::overloadProtectionCheck()
   }
 
   emerg_triggered = false;
+}
+
+void CoreBridgeClass::moduleLiveCheck()
+{
+  static unsigned long t;
+  static bool previous;
+  static bool sent;
+
+  if (!sent && system_status.module_initialized)
+  {
+    ///// Send HI Signal /////
+    char *p = new char[1]{CMD_HI};
+    queue.push(1, 1, p);
+
+    previous = system_status.module_connected;
+    system_status.module_connected = false;
+
+    sent = true;
+    t = millis();
+  }
+
+  if (sent && millis() - t > LIVE_DETECT_INTERVAL)
+  {
+    static bool modules_removed = false;
+
+    if (!system_status.module_connected)
+    {
+      if (!modules_removed)
+      {
+        this->digitalWrite(MODULES_STATE_PIN, 0);
+
+        ///// Create an Empty Accessory /////
+        CoreBridge.removeModules();
+        Homekit.createAccessory(CoreBridge.serial_number, CoreBridge.device_name);
+        Homekit.beginAccessory();
+
+        modules_removed = true;
+      }
+
+      ///// Attempting Reconnection /////
+      char *p = new char[2]{CMD_LOAD_MODULE, 0x00};
+      queue.push(1, 2, p);
+    }
+    else
+    {
+      modules_removed = false;
+    }
+
+    sent = false;
+  }
+}
+
+void CoreBridgeClass::recordSumCurrent()
+{
+  static unsigned long t;
+  static bool sent = false;
+
+  ///// 10 Minutes Before Recording, NINA Sends Request First /////
+  if (millis() - t >= RECORD_SUM_CURRENT_INTERVAL - 10000 && !sent)
+  {
+    CoreBridge.requestModulesData(MODULE_CURRENT);
+    sent = true;
+  }
+
+  if (millis() - t >= RECORD_SUM_CURRENT_INTERVAL)
+  {
+    int *buffer = new int[1]{system_status.sum_current};
+
+    Warehouse.appendData(system_status.sum_current);
+    MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
+    delete buffer;
+
+    t = millis();
+    sent = false;
+  }
 }
 
 CoreBridgeClass CoreBridge;

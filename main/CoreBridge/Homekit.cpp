@@ -7,7 +7,6 @@
 #include <hap.h>
 
 #include "CoreBridge.h"
-#include "Homekit.h"
 
 #include <hap_apple_servs.h>
 #include <hap_apple_chars.h>
@@ -140,7 +139,11 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
 
         if (hap_char_get_iid((hap_char_t *)module->hc) == hap_char_get_iid(write->hc))
         {
-          CoreBridge.setModuleSwitchState(i, (uint8_t)write->val.b);
+          uint8_t *addrs = new uint8_t[1]{(uint8_t)(i + 1)};
+          uint8_t *acts = new uint8_t[1]{(uint8_t)(write->val.b ? DO_TURN_ON : DO_TURN_OFF)};
+
+          CoreBridge.doModulesAction(addrs, acts, 1);
+          //CoreBridge.setModuleSwitchState(i, (uint8_t)write->val.b);
           *(write->status) = HAP_STATUS_SUCCESS;
           break;
         }

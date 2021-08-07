@@ -22,7 +22,6 @@
 #include <Arduino.h>
 
 #include "CoreBridge.h"
-#include "MqttCtrl.h"
 
 static int s_mqttctrl_status = 255;
 
@@ -43,13 +42,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
   switch ((esp_mqtt_event_id_t)event_id)
   {
   case MQTT_EVENT_CONNECTED:
-  printf("MQTT connected\n");
+    printf("MQTT connected\n");
     msg_id = esp_mqtt_client_subscribe(client, MQTT_URL_CMD, 2);
     s_mqttctrl_status = MQC_CONNECTED;
     break;
 
   case MQTT_EVENT_DISCONNECTED:
-  printf("MQTT disconnected\n");
+    printf("MQTT disconnected\n");
     s_mqttctrl_status = MQC_DISCONNECTED;
     esp_mqtt_client_reconnect(client);
     break;
@@ -92,18 +91,25 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
 
       case MQTT_CMD_DO_ACTION:
-
         for (int i = 0; i < (length - 1) / 2; i++)
         {
           switch (event->data[3])
           {
           case MQTT_DATA_SWITCH_STATE:
-            CoreBridge.setModuleSwitchState(event->data[i * 2 + 4], event->data[i * 2 + 5]);
+          {
+            uint8_t *addrs = new uint8_t[1]{(uint8_t)(event->data[i * 2 + 4] + 1)};
+            uint8_t *acts = new uint8_t[1]{(uint8_t)(event->data[i * 2 + 5] ? DO_TURN_ON : DO_TURN_OFF)};
+
+            CoreBridge.doModulesAction(addrs, acts, 1);
+            //CoreBridge.setModuleSwitchState(event->data[i * 2 + 4], event->data[i * 2 + 5]);
             break;
+          }
 
           case MQTT_DATA_PRIORITY:
+          {
             CoreBridge.setModulePrioirty(event->data[i * 2 + 4], event->data[i * 2 + 5]);
             break;
+          }
           }
         }
         break;
@@ -266,7 +272,7 @@ int MqttCtrlClass::configurationsUpdate()
 
   cJSON_AddStringToObject(root, "device_name", CoreBridge.device_name);
   cJSON_AddStringToObject(root, "serial_number", CoreBridge.serial_number);
-  cJSON_AddNumberToObject(root, "enable_pop", CoreBridge.enable_pop);
+  cJSON_AddNumberToObject(root, "enable_pop", CoreBridge.smf_status.enable_pop);
 
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
   cJSON_Delete(root);

@@ -1,10 +1,10 @@
 #include <lwip/sockets.h>
 #include "esp_log.h"
+#include "nvs_flash.h"
 
 #include "cJSON.h"
 
 #include <Arduino.h>
-#include "CommandHandler.h"
 #include "CoreBridge/CoreBridge.h"
 
 uartMsgQueue queue;
@@ -17,6 +17,33 @@ int uartReceive(const uint8_t command[], uint8_t response[])
   char *payload = (char *)calloc(length, sizeof(char));
   memcpy(payload, &command[8], length - 1);
 
+  ///// SAMD21 Event /////
+  if (port == 255)
+  {
+    switch (command[7])
+    {
+    case 0x00:
+    {
+      char *p = new char[2]{CMD_LOAD_MODULE, 0x00};
+      queue.push(1, 2, p);
+      break;
+    }
+
+    case 0x01: //Reset to Factory
+    {
+      CoreBridge.digitalWrite(WIFI_STATE_PIN, 0);
+      CoreBridge.digitalWrite(MODULES_STATE_PIN, 0);
+
+      nvs_flash_erase();
+      esp_restart();
+      break;
+    }
+    }
+
+    goto end;
+  }
+
+  ///// UART Event /////
   switch (command[7])
   {
   case CMD_REQ_ADR:
@@ -41,7 +68,7 @@ int uartReceive(const uint8_t command[], uint8_t response[])
     int totalModules = cJSON_GetObjectItemCaseSensitive(data, "total")->valuedouble;
     int index = cJSON_GetObjectItemCaseSensitive(data, "addr")->valuedouble - 1;
 
-    //digitalWrite(MODULES_STATE_PIN, LOW);
+    CoreBridge.digitalWrite(MODULES_STATE_PIN, 0);
 
     if (index + 1 == totalModules) //first module arrives
     {
@@ -65,14 +92,14 @@ int uartReceive(const uint8_t command[], uint8_t response[])
         p[i] = i;
       queue.push(3, totalModules + 1, p);
 
-      ///// Initially Update Module Current /////
+      ///// Initially Update Modules Current /////
       CoreBridge.requestModulesData(MODULE_CURRENT);
 
       ///// Start Online Service /////
       Homekit.beginAccessory();
       MqttCtrl.modulesUpdate();
 
-      //digitalWrite(MODULES_STATE_PIN, HIGH);
+      CoreBridge.digitalWrite(MODULES_STATE_PIN, 1);
       CoreBridge.system_status.module_initialized = true;
       CoreBridge.system_status.module_connected = true;
     }
@@ -84,6 +111,7 @@ int uartReceive(const uint8_t command[], uint8_t response[])
     CoreBridge.system_status.module_connected = true;
     break;
   }
+
   case CMD_UPDATE_DATA:
   {
     int addr = payload[0];
@@ -97,17 +125,6 @@ int uartReceive(const uint8_t command[], uint8_t response[])
       CoreBridge.setModuleSwitchState(addr - 1, value);
       break;
     }
-
-      /*case MODULE_PRIORITY: {
-            #if DEBUG
-              Serial.print("[UART] Module ");
-              Serial.print(addr);
-              Serial.print(" priority changes to ");
-              Serial.println(value);
-            #endif
-              sys_status.modules[addr - 1][0] = value;
-              break;
-            }*/
 
     case MODULE_CURRENT:
     {
@@ -142,11 +159,23 @@ int uartReceive(const uint8_t command[], uint8_t response[])
       printf("[SMF] Update MCUB: %i\n", mcub);
       break;
     }
+
+      /*case MODULE_PRIORITY: {
+            #if DEBUG
+              Serial.print("[UART] Module ");
+              Serial.print(addr);
+              Serial.print(" priority changes to ");
+              Serial.println(value);
+            #endif
+              sys_status.modules[addr - 1][0] = value;
+              break;
+            }*/
     }
     break;
   }
   }
 
+end:
   free(payload);
 
   response[2] = 1; // number of parameters
@@ -177,39 +206,6 @@ int uartTransmit(const uint8_t command[], uint8_t response[])
 
   return 9 + length;
 }
-/*
-int resetToFactory(const uint8_t command[], uint8_t response[])
-{
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = 1;
-
-  nvs_flash_erase();
-  esp_restart();
-
-  return 6;
-}
-
-int pushWarehouseBuffer(const uint8_t command[], uint8_t response[])
-{
-  uint16_t length = ((command[3] << 8) & 0xff00) | (command[4] & 0xff);
-
-  int *warehouseBuffer = (int *)malloc(length / 2 * sizeof(int));
-
-  for (int i = 0; i < length / 2; i++)
-  {
-    warehouseBuffer[i] = (command[5 + (i * 2)] & 0xff | (command[6 +(i * 2)] << 8) & 0xff00);
-  }
-
-  MqttCtrl.warehouseRequestBufferUpdate(warehouseBuffer, length / 2);
-  free(warehouseBuffer);
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = 1;
-
-  return 6;
-}*/
 
 ///// UART MSG Queue /////
 void uartMsgQueue::push(int po, int l, char *p)
@@ -303,9 +299,7 @@ int CommandHandlerClass::handle(const uint8_t command[], uint8_t response[])
     CommandHandlerType commandHandlerType = commandHandlers[command[1]];
 
     if (commandHandlerType)
-    {
       responseLength = commandHandlerType(command, response);
-    }
   }
 
   if (responseLength == 0)
@@ -331,9 +325,7 @@ int CommandHandlerClass::handle(const uint8_t command[], uint8_t response[])
 void CommandHandlerClass::gpio0Updater(void *)
 {
   while (1)
-  {
     CommandHandler.updateGpio0Pin();
-  }
 }
 
 void CommandHandlerClass::updateGpio0Pin()
