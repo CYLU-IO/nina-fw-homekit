@@ -2,11 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <Arduino.h>
-#include <hap.h>
 #include <hap_platform_keystore.h>
 
-#include "CoreBridge.h"
+#include <CoreBridge.h>
 
 ///// Variables Definition /////
 system_status_t CoreBridgeClass::system_status;
@@ -106,13 +104,12 @@ int CoreBridgeClass::updateModulesData(uint8_t type, uint8_t *addrs, uint16_t *v
     p[i * 3 + 4] = values[i] >> 8;
   }
   queue.push(3, length * 3 + 2, p);
-  delete addrs;
-  delete values;
-
+  delete[] addrs;
+  delete[] values;
   return ESP_OK;
 }
 
-int CoreBridgeClass::doModulesAction(uint8_t *addrs, uint8_t *actions, uint8_t length)
+int CoreBridgeClass::doModulesAction(uint8_t *addrs, uint8_t *actions, uint8_t length, bool malloc_ptr)
 {
   int l = 2 * length + 1;
   char *p = new char[l]{CMD_DO_MODULE};
@@ -124,10 +121,22 @@ int CoreBridgeClass::doModulesAction(uint8_t *addrs, uint8_t *actions, uint8_t l
   }
 
   queue.push(3, l, p);
-  delete addrs;
-  delete actions;
+  if (malloc_ptr)
+  {
+    free(addrs);
+    free(actions);
+  }
+  else
+  {
+    delete[] addrs;
+    delete[] actions;
+  }
 
   return ESP_OK;
+}
+int CoreBridgeClass::doModulesAction(uint8_t *addrs, uint8_t *actions, uint8_t length)
+{
+  return this->doModulesAction(addrs, actions, length, false);
 }
 
 int CoreBridgeClass::setModuleSwitchState(uint8_t index, uint8_t state)
@@ -285,7 +294,7 @@ void CoreBridgeClass::recordSumCurrent()
 
     Warehouse.appendData(system_status.sum_current);
     MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
-    delete buffer;
+    delete[] buffer;
 
     t = millis();
     sent = false;

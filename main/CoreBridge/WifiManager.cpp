@@ -36,13 +36,13 @@ void wifimgr_event_handler(void *arg, esp_event_base_t event_base,
 
     if (strlen((const char *)wifi_config.sta.ssid))
     {
-      ESP_ERROR_CHECK(esp_wifi_disconnect());
-      ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-      ESP_ERROR_CHECK(esp_wifi_connect());
+      esp_wifi_disconnect();
+      esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+      esp_wifi_connect();
     }
     else
     {
-      xTaskCreate(smarconfig_task, "smarconfig_task", 4096, NULL, 3, NULL);
+      xTaskCreate(smarconfig_task, "smarconfig_task", 2048, NULL, 3, NULL);
     }
   }
   else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
@@ -71,7 +71,7 @@ void wifimgr_event_handler(void *arg, esp_event_base_t event_base,
     s_wifi_status = WL_CONNECTED;
 
     CoreBridge.digitalWrite(WIFI_STATE_PIN, 1);
-    MqttCtrl.begin();
+   //MqttCtrl.begin();
 
     xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
   }
@@ -130,6 +130,7 @@ void smarconfig_task(void *parm)
     if (uxBits & ESPTOUCH_DONE_BIT)
     {
       esp_smartconfig_stop();
+      printf("Used Stack Size for smartconfig is %i\n", uxTaskGetStackHighWaterMark( NULL ));
       vTaskDelete(NULL);
     }
   }

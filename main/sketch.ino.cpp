@@ -14,7 +14,7 @@ extern "C"
 #include <Arduino.h>
 #include <SPIS.h>
 
-#include "CommandHandler.h"
+#include <CommandHandler.h>
 #include "CoreBridge/CoreBridge.h"
 
 #define SPI_BUFFER_LEN SPI_MAX_DMA_LEN

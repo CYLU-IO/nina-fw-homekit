@@ -1,13 +1,14 @@
 #ifndef COREBRIDGE_H
 #define COREBRIDGE_H
 
+#include <Arduino.h>
 #include <hap.h>
 
-#include "Homekit.h"
-#include "MqttCtrl.h"
-#include "WifiManager.h"
-#include "Warehouse.h"
-#include "CommandHandler.h"
+#include <Homekit.h>
+#include <MqttCtrl.h>
+#include <WifiManager.h>
+#include <Warehouse.h>
+#include <CommandHandler.h>
 
 ///// MAX NUMBER /////
 #define SERIAL_NUMBER_LENGTH 12
@@ -75,6 +76,7 @@ public:
 
   int requestModulesData(uint8_t type);
   int updateModulesData(uint8_t type, uint8_t *addrs, uint16_t* values, uint8_t length);
+  int doModulesAction(uint8_t *addrs, uint8_t *actions, uint8_t length, bool malloc_ptr);
   int doModulesAction(uint8_t* addrs, uint8_t *actions, uint8_t length);
 
   int setModuleSwitchState(uint8_t index, uint8_t state);

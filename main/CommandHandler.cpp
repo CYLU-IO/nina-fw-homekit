@@ -1,11 +1,9 @@
 #include <lwip/sockets.h>
 #include "esp_log.h"
 #include "nvs_flash.h"
-
 #include "cJSON.h"
 
-#include <Arduino.h>
-#include "CoreBridge/CoreBridge.h"
+#include <CoreBridge.h>
 
 uartMsgQueue queue;
 
@@ -121,18 +119,18 @@ int uartReceive(const uint8_t command[], uint8_t response[])
     {
     case MODULE_SWITCH_STATE:
     {
-      printf("[UART] Module %i state changes to %i\n", addr, value);
+      //printf("[UART] Module %i state changes to %i\n", addr, value);
       CoreBridge.setModuleSwitchState(addr - 1, value);
       break;
     }
 
     case MODULE_CURRENT:
     {
-      printf("[UART] Module %i current updates to %i\n", addr, value);
+      //printf("[UART] Module %i current updates to %i\n", addr, value);
       ///// Check MCUB Triggering /////
       if (value >= CoreBridge.getModule(addr - 1)->current + CoreBridge.smf_status.mcub)
       {
-        printf("[SMF] MCUB Triggered by module %i\n", addr);
+        //printf("[SMF] MCUB Triggered by module %i\n", addr);
         CoreBridge.smf_status.overload_triggered_addr = addr;
         CoreBridge.overloadProtectionCheck();
       }
@@ -156,7 +154,7 @@ int uartReceive(const uint8_t command[], uint8_t response[])
       uint16_t *values = new uint16_t[1]{(uint16_t)mcub};
 
       CoreBridge.updateModulesData(MODULE_MCUB, addrs, values, 1);
-      printf("[SMF] Update MCUB: %i\n", mcub);
+      //printf("[SMF] Update MCUB: %i\n", mcub);
       break;
     }
 
@@ -201,7 +199,7 @@ int uartTransmit(const uint8_t command[], uint8_t response[])
   for (int i = 0; i < length; i++)
     response[8 + i] = pack->payload[i];
 
-  delete pack->payload;
+  delete[] pack->payload;
   delete pack;
 
   return 9 + length;

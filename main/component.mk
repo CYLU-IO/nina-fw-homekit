@@ -1,3 +1,3 @@
-COMPONENT_ADD_INCLUDEDIRS := ./ CoreBridge/
+COMPONENT_ADD_INCLUDEDIRS := ./ ./CoreBridge/
 
-COMPONENT_SRCDIRS := ./ CoreBridge/
+COMPONENT_SRCDIRS := ./ ./CoreBridge/

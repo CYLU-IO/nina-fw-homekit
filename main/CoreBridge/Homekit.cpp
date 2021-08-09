@@ -1,8 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/queue.h>
 #include <esp_log.h>
 #include <hap.h>
 
@@ -10,8 +7,6 @@
 
 #include <hap_apple_servs.h>
 #include <hap_apple_chars.h>
-
-static const char *TAG = "Homekit";
 
 hap_acc_t *HomekitClass::_accessory;
 
@@ -26,7 +21,7 @@ HomekitClass::HomekitClass()
 
 int HomekitClass::init()
 {
-  hap_set_debug_level(HAP_DEBUG_LEVEL_INFO);
+  hap_set_debug_level(HAP_DEBUG_LEVEL_ERR);
 
   return hap_init(HAP_TRANSPORT_WIFI);
 }
@@ -133,21 +128,7 @@ int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *se
 
     if (!strcmp(hap_char_get_type_uuid(write->hc), HAP_CHAR_UUID_ON))
     {
-      for (int i = 0; i < CoreBridge.getModuleNum(); i++)
-      {
-        module_t *module = CoreBridge.getModule(i);
-
-        if (hap_char_get_iid((hap_char_t *)module->hc) == hap_char_get_iid(write->hc))
-        {
-          uint8_t *addrs = new uint8_t[1]{(uint8_t)(i + 1)};
-          uint8_t *acts = new uint8_t[1]{(uint8_t)(write->val.b ? DO_TURN_ON : DO_TURN_OFF)};
-
-          CoreBridge.doModulesAction(addrs, acts, 1);
-          //CoreBridge.setModuleSwitchState(i, (uint8_t)write->val.b);
-          *(write->status) = HAP_STATUS_SUCCESS;
-          break;
-        }
-      }
+      *(write->status) = HAP_STATUS_SUCCESS;
     }
     else
     {

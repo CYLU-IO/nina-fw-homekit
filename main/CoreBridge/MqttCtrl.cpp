@@ -42,13 +42,11 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
   switch ((esp_mqtt_event_id_t)event_id)
   {
   case MQTT_EVENT_CONNECTED:
-    printf("MQTT connected\n");
     msg_id = esp_mqtt_client_subscribe(client, MQTT_URL_CMD, 2);
     s_mqttctrl_status = MQC_CONNECTED;
     break;
 
   case MQTT_EVENT_DISCONNECTED:
-    printf("MQTT disconnected\n");
     s_mqttctrl_status = MQC_DISCONNECTED;
     esp_mqtt_client_reconnect(client);
     break;
@@ -122,14 +120,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
           memset(device_name, 0x00, sizeof(device_name));
           memcpy(device_name, &event->data[4], length - 1);
 
-          printf("Configure DEVICE_NAME to %s\n", device_name);
-
           CoreBridge.setDeviceName(device_name);
+          printf("Configure DEVICE_NAME to %s\n", device_name);
           break;
 
         case MQTT_CONFIG_ENABLE_POP:
-          printf("Configure ENABLE_POP to %i\n", event->data[4]);
           CoreBridge.setEnablePOP((int8_t)event->data[4]);
+          printf("Configure ENABLE_POP to %i\n", event->data[4]);
           break;
         }
         break;
