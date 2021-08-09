@@ -25,9 +25,9 @@
 
 #include "ECCX08Cert.h"
 
-/******************************************************************************
- * DEFINE
- ******************************************************************************/
+ /******************************************************************************
+  * DEFINE
+  ******************************************************************************/
 
 #define ASN1_INTEGER           0x02
 #define ASN1_BIT_STRING        0x03
@@ -389,7 +389,7 @@ int ECCX08CertClass::endReconstruction() {
   int signatureLen = signatureLength(compressedCert.signature);
 
   int certInfoLen = 5 + serialNumberLen + 12 + issuerHeaderLen + issuerLen + (datesSize + 2) +
-                    subjectHeaderLen + subjectLen + publicKeyLen;
+    subjectHeaderLen + subjectLen + publicKeyLen;
 
   if (authorityKeyIdentifierLen) {
     certInfoLen += authorityKeyIdentifierLen;
@@ -547,13 +547,13 @@ int ECCX08CertClass::issuerOrSubjectLength(const String& countryName,
     const String& organizationName,
     const String& organizationalUnitName,
     const String& commonName) {
-  int length                       = 0;
-  int countryNameLength            = countryName.length();
-  int stateProvinceNameLength      = stateProvinceName.length();
-  int localityNameLength           = localityName.length();
-  int organizationNameLength       = organizationName.length();
+  int length = 0;
+  int countryNameLength = countryName.length();
+  int stateProvinceNameLength = stateProvinceName.length();
+  int localityNameLength = localityName.length();
+  int organizationNameLength = organizationName.length();
   int organizationalUnitNameLength = organizationalUnitName.length();
-  int commonNameLength             = commonName.length();
+  int commonNameLength = commonName.length();
 
   if (countryNameLength) {
     length += (11 + countryNameLength);

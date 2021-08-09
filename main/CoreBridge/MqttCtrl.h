@@ -26,8 +26,7 @@
 #define MQTT_DO_TURN_OFF 0x7a
 #define MQTT_DO_TURN_ON 0x79
 
-typedef enum
-{
+typedef enum {
   MQC_IDLE_STATUS = 0,
   MQC_SUBSCRIBED = 1,
   MQC_UNSUBSCRIBED = 2,
@@ -36,8 +35,7 @@ typedef enum
   MQC_DISCONNECTED = 6
 } mqc_status_t;
 
-class MqttCtrlClass
-{
+class MqttCtrlClass {
 private:
   static esp_mqtt_client_handle_t client;
 
@@ -51,15 +49,15 @@ public:
   int disconnect();
   int stop();
 
-  int moduleUpdate(uint8_t index, const char *name, int value);
-  int moduleUpdate(uint8_t index, const char *name, const char *value);
+  int moduleUpdate(uint8_t index, const char* name, int value);
+  int moduleUpdate(uint8_t index, const char* name, const char* value);
 
   int modulesUpdate();
 
   int configurationsUpdate();
 
   int warehouseAvailableLengthUpdate(uint16_t length);
-  int warehouseRequestBufferUpdate(int *buf, uint8_t length);
+  int warehouseRequestBufferUpdate(int* buf, uint8_t length);
 };
 
 extern MqttCtrlClass MqttCtrl;

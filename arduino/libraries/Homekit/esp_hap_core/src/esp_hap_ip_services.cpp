@@ -48,7 +48,7 @@
 #include <hap_platform_os.h>
 #include <esp_hap_ip_services.h>
 
-#include <CConnector.h>
+
 
 #ifdef ESP_MFI_DEBUG_ENABLE
 #define ESP_MFI_DEBUG_PLAIN(fmt, ...)   \
@@ -816,41 +816,19 @@ static int hap_http_handle_set_char(jparse_ctx_t *jctx, char *outbuf, int buf_si
 	 * So, last iteration will invoke the write callback for the last
 	 * set of characteritics.
 	 */
-
-    uint8_t *addrs = (uint8_t *)malloc(char_cnt * sizeof(uint8_t));
-    uint8_t *acts = (uint8_t *)malloc(char_cnt * sizeof(uint8_t));
-    int pos = 0;
+    printf("char_cnt: %i\n", char_cnt);
 	for (i = 0; i <= char_cnt; i++) {
 		if ((i < char_cnt) && ((hap_serv_t *)hs == hap_char_get_parent(write_arr[i].hc)))
 			continue;
 		else {
-            ///// CUSTOM - Create Collected DO_ACTION Pairs Instead of Individual /////
-            int count = i - hs_index;
-            hap_write_data_t *write;
-
-            for (int j = 0; j < count; j++) {
-                write = &write_arr[hs_index + j];
-
-                if (!strcmp(hap_char_get_type_uuid(write->hc), HAP_CHAR_UUID_ON)) {
-                    addrs[pos] = CoreBridge_getModuleAddrByHc(write->hc);
-                    acts[pos] = (uint8_t)(write->val.b ? DO_TURN_ON : DO_TURN_OFF);
-                    pos++;
-
-                    *(write->status) = HAP_STATUS_SUCCESS;
-                } else {
-                    *(write->status) = HAP_STATUS_RES_ABSENT;
-                }
-            }
-            ////////////////////
-
 			/* Passing the pointers to the first elements of the array
 			 * for a given service (indicated by hs_index).
 			 * Number of elements of the array are indicated by
 			 * i - hs_index
 			 */
-			/*if (hs->write_cb(&write_arr[hs_index], count,
+			if (hs->write_cb(&write_arr[hs_index], i - hs_index,
 					hs->priv, hap_platform_httpd_get_sess_ctx(req)) != HAP_SUCCESS)
-				write_err = true;*/
+				write_err = true;
 			if (i < char_cnt) {
 				hs = (__hap_serv_t *)hap_char_get_parent(write_arr[i].hc);
 				hs_index = i;
@@ -865,7 +843,6 @@ static int hap_http_handle_set_char(jparse_ctx_t *jctx, char *outbuf, int buf_si
 				((__hap_char_t *)(write_arr[i].hc))->iid, *write_arr[i].status);
 		}
 	}
-    CoreBridge_doModulesAction(addrs, acts, char_cnt);
 
 	int ret = HAP_SUCCESS;
 set_char_end:

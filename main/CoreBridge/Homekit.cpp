@@ -8,34 +8,29 @@
 #include <hap_apple_servs.h>
 #include <hap_apple_chars.h>
 
-hap_acc_t *HomekitClass::_accessory;
+hap_acc_t* HomekitClass::_accessory;
 
-static int hk_identify(hap_acc_t *ha)
-{
+static int hk_identify(hap_acc_t* ha) {
   return HAP_SUCCESS;
 }
 
-HomekitClass::HomekitClass()
-{
-}
+HomekitClass::HomekitClass() {}
 
-int HomekitClass::init()
-{
+int HomekitClass::init() {
   hap_set_debug_level(HAP_DEBUG_LEVEL_ERR);
 
   return hap_init(HAP_TRANSPORT_WIFI);
 }
 
 /* Initialize the HAP core */
-int HomekitClass::createAccessory(const char *serial, const char *name)
-{
+int HomekitClass::createAccessory(const char* serial, const char* name) {
   int ret = 0;
 
   hap_acc_cfg_t cfg = {
-      .name = (char *)name,
+      .name = (char*)name,
       .model = "CDBKV01TWA",
       .manufacturer = "CYLU.IO",
-      .serial_num = (char *)serial,
+      .serial_num = (char*)serial,
       .fw_rev = "1.0.0",
       .hw_rev = "1.0",
       .pv = "1.1.0",
@@ -50,38 +45,35 @@ int HomekitClass::createAccessory(const char *serial, const char *name)
 
   hap_update_config_number();
 
-/* Set hardcoded accessory code, later shoule be define in factory_nvs */
+  /* Set hardcoded accessory code, later shoule be define in factory_nvs */
 #ifdef CONFIG_EXAMPLE_USE_HARDCODED_SETUP_CODE
   hap_set_setup_code(CONFIG_EXAMPLE_SETUP_CODE);
   ret = hap_set_setup_id(CONFIG_EXAMPLE_SETUP_ID);
 #else
-  char setup_code[11] = {0};
+  char setup_code[11] = { 0 };
   size_t setup_code_size = sizeof(setup_code);
-  ret = hap_factory_keystore_get("hap_setup", "setup_code", (uint8_t *)setup_code, &setup_code_size);
+  ret = hap_factory_keystore_get("hap_setup", "setup_code", (uint8_t*)setup_code, &setup_code_size);
 #endif
 
   return ret;
 }
 
-int HomekitClass::countAccessory()
-{
+int HomekitClass::countAccessory() {
   return hap_count_accessories();
 }
 
-int HomekitClass::beginAccessory()
-{
+int HomekitClass::beginAccessory() {
   static bool first = true;
   int ret = HAP_SUCCESS;
 
-  for (int i = 0; i < CoreBridge.getModuleNum(); i++)
-  {
-    module_t *module = CoreBridge.getModule(i);
-    hap_serv_t *service;
+  for (int i = 0; i < CoreBridge.getModuleNum(); i++)   {
+    module_t* module = CoreBridge.getModule(i);
+    hap_serv_t* service;
 
     service = hap_serv_switch_create(module->state);
-    hap_serv_add_char(service, hap_char_name_create((char *)module->name));
+    hap_serv_add_char(service, hap_char_name_create((char*)module->name));
 
-    hap_char_t *characteristic = hap_serv_get_char_by_uuid(service, HAP_CHAR_UUID_ON);
+    hap_char_t* characteristic = hap_serv_get_char_by_uuid(service, HAP_CHAR_UUID_ON);
 
     hap_serv_set_write_cb(service, switchWrite);
 
@@ -92,8 +84,7 @@ int HomekitClass::beginAccessory()
 
   hap_add_accessory(_accessory);
 
-  if (first)
-  {
+  if (first)   {
     ret = hap_start();
     first = false;
   }
@@ -101,15 +92,13 @@ int HomekitClass::beginAccessory()
   return ret;
 }
 
-int HomekitClass::deleteAccessory()
-{
+int HomekitClass::deleteAccessory() {
   hap_acc_delete(_accessory);
 
   return 0;
 }
 
-int HomekitClass::setServiceValue(hap_char_t *hc, uint8_t state)
-{
+int HomekitClass::setServiceValue(hap_char_t* hc, uint8_t state) {
   hap_val_t appliance_value = {
       .b = (bool)state,
   };
@@ -117,26 +106,8 @@ int HomekitClass::setServiceValue(hap_char_t *hc, uint8_t state)
   return hap_char_update_val(hc, &appliance_value);
 }
 
-int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void *serv_priv, void *write_priv)
-{
-  int i, ret = HAP_SUCCESS;
-  hap_write_data_t *write;
-
-  for (i = 0; i < count; i++)
-  {
-    write = &write_data[i];
-
-    if (!strcmp(hap_char_get_type_uuid(write->hc), HAP_CHAR_UUID_ON))
-    {
-      *(write->status) = HAP_STATUS_SUCCESS;
-    }
-    else
-    {
-      *(write->status) = HAP_STATUS_RES_ABSENT;
-    }
-  }
-
-  return ret;
+int HomekitClass::switchWrite(hap_write_data_t write_data[], int count, void* serv_priv, void* write_priv) {
+  return HAP_SUCCESS;
 }
 
 HomekitClass Homekit;

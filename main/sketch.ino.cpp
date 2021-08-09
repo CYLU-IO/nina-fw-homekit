@@ -19,15 +19,14 @@ extern "C"
 
 #define SPI_BUFFER_LEN SPI_MAX_DMA_LEN
 
-uint8_t *commandBuffer;
-uint8_t *responseBuffer;
+uint8_t* commandBuffer;
+uint8_t* responseBuffer;
 
-void setup()
-{
+void setup() {
   ///// SPI Initialization /////
   SPIS.begin();
-  commandBuffer = (uint8_t *)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
-  responseBuffer = (uint8_t *)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
+  commandBuffer = (uint8_t*)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
+  responseBuffer = (uint8_t*)heap_caps_malloc(SPI_BUFFER_LEN, MALLOC_CAP_DMA);
   CommandHandler.begin();
 
   ///// Service Initialization /////
@@ -42,8 +41,7 @@ void setup()
   //CoreBridge.setModuleValue(0, 1);
 }
 
-void loop()
-{
+void loop() {
   ///// SPI Handling /////
   memset(commandBuffer, 0x00, SPI_BUFFER_LEN);
   int commandLength = SPIS.transfer(NULL, commandBuffer, SPI_BUFFER_LEN);

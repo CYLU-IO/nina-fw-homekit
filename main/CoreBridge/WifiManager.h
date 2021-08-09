@@ -1,8 +1,7 @@
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
 
-typedef enum
-{
+typedef enum {
   WL_IDLE_STATUS = 0,
   WL_START_SCAN = 1,
   WL_GOT_SSID_PWD = 2,
@@ -11,13 +10,12 @@ typedef enum
   WL_DISCONNECTED = 6
 } wl_status_t;
 
-class WifiManager
-{
+class WifiManager {
 public:
   WifiManager();
 
   void begin();
-  
+
   int getStatus();
 
   void resetNetwork();

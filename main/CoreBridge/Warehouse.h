@@ -5,8 +5,7 @@
 #define EEPROM_HEAD_ADDR 0x00
 #define EEPROM_BUFFER_LEN 14400
 
-class WarehouseClass
-{
+class WarehouseClass {
 private:
   void write(int val, int addr);
   int read(int addr);
@@ -20,8 +19,8 @@ public:
   int getAvailableLength();
 
   int appendData(int value);
-  void getDataPack(int addr, int &amount, int *buffer);
-  void getDataByPage(int page, int &amount, int *buffer);
+  void getDataPack(int addr, int& amount, int* buffer);
+  void getDataByPage(int page, int& amount, int* buffer);
 
   void clearStorage();
 };
