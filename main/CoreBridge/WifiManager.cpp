@@ -109,9 +109,10 @@ void smarconfig_task(void* parm) {
 
     if (uxBits & ESPTOUCH_DONE_BIT) {
       esp_smartconfig_stop();
-      printf("Used Stack Size for smartconfig is %i\n", uxTaskGetStackHighWaterMark(NULL));
       vTaskDelete(NULL);
     }
+
+    taskYIELD();
   }
 }
 

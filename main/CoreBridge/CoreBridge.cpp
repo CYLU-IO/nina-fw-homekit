@@ -157,7 +157,7 @@ module_t* CoreBridgeClass::getModule(uint8_t index) {
 }
 
 void CoreBridgeClass::overloadProtectionCheck() {
-  static bool emerg_triggered;
+  static bool emerg_triggered = false;
 
   if (system_status.sum_current > MAX_CURRENT) {
     if (!emerg_triggered) {
@@ -165,7 +165,7 @@ void CoreBridgeClass::overloadProtectionCheck() {
       if (smf_status.enable_pop) {
         int highest_priority = 0;
 
-        for (int i = 0; i < system_status.num_modules; i++) {
+        for (int i = 0; i < this->getModuleNum(); i++) {
           module_t* module = this->getModule(i);
           if (module->state && module->priority >= highest_priority) {
             smf_status.overload_triggered_addr = i + 1;
@@ -179,14 +179,14 @@ void CoreBridgeClass::overloadProtectionCheck() {
       uint8_t* addrs = new uint8_t[1]{ (uint8_t)smf_status.overload_triggered_addr };
       uint8_t* acts = new uint8_t[1]{ DO_TURN_OFF };
 
-      CoreBridge.doModulesAction(addrs, acts, 1);
+      this->doModulesAction(addrs, acts, 1);
       emerg_triggered = true;
 
       return;
     }
 
     ///// Request Current per Second /////
-    static unsigned long t;
+    static unsigned long t = millis();
     if (millis() - t > 1000) {
       this->requestModulesData(MODULE_CURRENT);
       t = millis();
@@ -198,68 +198,71 @@ void CoreBridgeClass::overloadProtectionCheck() {
   emerg_triggered = false;
 }
 
-void CoreBridgeClass::moduleLiveCheck() {
-  static unsigned long t;
-  static bool previous;
-  static bool sent;
+void moduleLiveCheck(void*) {
+  unsigned long t = millis();
+  bool previous, sent = false;
 
-  if (!sent && system_status.module_initialized) {
-    ///// Send HI Signal /////
-    char* p = new char[1]{ CMD_HI };
-    queue.push(1, 1, p);
+  while (1) {
+    if (!sent && CoreBridge.system_status.module_initialized) {
+      ///// Send HI Signal /////
+      char* p = new char[1]{ CMD_HI };
+      queue.push(1, 1, p);
 
-    previous = system_status.module_connected;
-    system_status.module_connected = false;
+      previous = CoreBridge.system_status.module_connected;
+      CoreBridge.system_status.module_connected = false;
 
-    sent = true;
-    t = millis();
-  }
-
-  if (sent && millis() - t > LIVE_DETECT_INTERVAL) {
-    static bool modules_removed = false;
-
-    if (!system_status.module_connected) {
-      if (!modules_removed) {
-        this->digitalWrite(MODULES_STATE_PIN, 0);
-
-        ///// Create an Empty Accessory /////
-        CoreBridge.removeModules();
-        Homekit.createAccessory(CoreBridge.serial_number, CoreBridge.device_name);
-        Homekit.beginAccessory();
-
-        modules_removed = true;
-      }
-
-      ///// Attempting Reconnection /////
-      char* p = new char[2]{ CMD_LOAD_MODULE, 0x00 };
-      queue.push(1, 2, p);
-    } else {
-      modules_removed = false;
+      sent = true;
+      t = millis();
     }
 
-    sent = false;
+    if (sent && millis() - t > LIVE_DETECT_INTERVAL) {
+      static bool modules_removed = false;
+
+      if (!CoreBridge.system_status.module_connected) {
+        if (!modules_removed) {
+          CoreBridge.digitalWrite(MODULES_STATE_PIN, 0);
+
+          ///// Create an Empty Accessory /////
+          CoreBridge.removeModules();
+          Homekit.createAccessory(CoreBridge.serial_number, CoreBridge.device_name);
+          Homekit.beginAccessory();
+
+          modules_removed = true;
+        }
+
+        ///// Attempting Reconnection /////
+        char* p = new char[2]{ CMD_LOAD_MODULE, 0x00 };
+        queue.push(1, 2, p);
+      } else {
+        modules_removed = false;
+      }
+
+      sent = false;
+    }
+
+    taskYIELD();
   }
 }
 
-void CoreBridgeClass::recordSumCurrent() {
-  static unsigned long t;
-  static bool sent = false;
+void recordSumCurrent(void*) {
+  TickType_t xLastWakeTime = xTaskGetTickCount();
 
-  ///// 10 Minutes Before Recording, NINA Sends Request First /////
-  if (millis() - t >= RECORD_SUM_CURRENT_INTERVAL - 10000 && !sent) {
-    CoreBridge.requestModulesData(MODULE_CURRENT);
-    sent = true;
-  }
+  while (1) {
+    if (CoreBridge.system_status.module_initialized) {
+      ///// 10 Seconds Before Recording, NINA Sends Request First /////
+      CoreBridge.requestModulesData(MODULE_CURRENT);
+      vTaskDelayUntil(&xLastWakeTime, 10000);
 
-  if (millis() - t >= RECORD_SUM_CURRENT_INTERVAL) {
-    int* buffer = new int[1]{ system_status.sum_current };
+      int* buffer = new int[1]{ CoreBridge.system_status.sum_current };
 
-    Warehouse.appendData(system_status.sum_current);
-    MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
-    delete[] buffer;
+      Warehouse.appendData(CoreBridge.system_status.sum_current);
+      MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
+      delete[] buffer;
 
-    t = millis();
-    sent = false;
+      vTaskDelayUntil(&xLastWakeTime, RECORD_SUM_CURRENT_INTERVAL - 10000);
+    }
+
+    taskYIELD();
   }
 }
 

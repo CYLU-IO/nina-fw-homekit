@@ -70,9 +70,10 @@ public:
   module_t* getModule(uint8_t index);
 
   void overloadProtectionCheck();
-  void moduleLiveCheck();
-  void recordSumCurrent();
 };
+
+void moduleLiveCheck(void*);
+void recordSumCurrent(void*);
 
 extern CoreBridgeClass CoreBridge;
 
