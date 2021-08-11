@@ -1,6 +1,5 @@
 #include <stdio.h>
 
-#include <Arduino.h>
 #include <Wire.h>
 
 #include "CoreBridge.h"

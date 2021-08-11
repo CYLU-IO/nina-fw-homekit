@@ -37,13 +37,15 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
   esp_mqtt_client_handle_t client = event->client;
   int msg_id;
 
-  switch ((esp_mqtt_event_id_t)event_id)   {
+  switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
+      printf("MQTT_EVENT_CONNECTED\n");
       msg_id = esp_mqtt_client_subscribe(client, MQTT_URL_CMD, 2);
       s_mqttctrl_status = MQC_CONNECTED;
       break;
 
     case MQTT_EVENT_DISCONNECTED:
+      printf("MQTT_EVENT_DISCONNECTED\n");
       s_mqttctrl_status = MQC_DISCONNECTED;
       esp_mqtt_client_reconnect(client);
       break;
@@ -52,14 +54,25 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
       esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":1}", 0, 2, 1);
       break;
 
+    case MQTT_EVENT_UNSUBSCRIBED:
+      printf("MQTT_EVENT_UNSUBSCRIBED\n");
+      esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":0}", 0, 2, 1);
+      break;
+
     case MQTT_EVENT_DATA:
-      if (strcmp(event->topic, MQTT_URL_CMD) == 0)     {
-        char cmd = event->data[0];
+      printf("MQTT DATA: ");
+      for (int i = 0; i < event->data_len; i++) {
+        printf("%04X ", event->data[i]);
+      }
+      printf("\n");
+
+
+      if (strcmp(event->topic, MQTT_URL_CMD) == 0) {
         int length = (event->data[1] & 0xff) | (event->data[2] << 8);
 
-        switch (cmd)       {
+        switch (event->data[0]) {
           case MQTT_CMD_REQUEST_DATA:
-            switch (event->data[3])         {
+            switch (event->data[3]) {
               case MQTT_DATA_MODULES_DATA:
                 MqttCtrl.modulesUpdate();
                 break;
@@ -83,8 +96,8 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
             break;
 
           case MQTT_CMD_DO_ACTION:
-            for (int i = 0; i < (length - 1) / 2; i++)         {
-              switch (event->data[3])           {
+            for (int i = 0; i < (length - 1) / 2; i++) {
+              switch (event->data[3]) {
                 case MQTT_DATA_SWITCH_STATE:
                 {
                   uint8_t* addrs = new uint8_t[1]{ (uint8_t)(event->data[i * 2 + 4] + 1) };
@@ -105,7 +118,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
             break;
 
           case MQTT_CMD_CONFIGURE:
-            switch (event->data[3])         {
+            switch (event->data[3]) {
               case MQTT_CONFIG_DEVICE_NAME:
                 char device_name[DEVICE_NAME_LENGTH + 1];
                 memset(device_name, 0x00, sizeof(device_name));
@@ -128,7 +141,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_ERROR:
       printf("MQTT_EVENT_ERROR\n");
 
-      if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT)     {
+      if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
         log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
         log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
         log_error_if_nonzero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
@@ -188,8 +201,11 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, int value) {
   cJSON_AddStringToObject(root, "name", name);
   cJSON_AddNumberToObject(root, "value", value);
 
-  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  char* jsonPrint = cJSON_Print(root);
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, jsonPrint, 0, 1, 0);
   cJSON_Delete(root);
+  cJSON_free(jsonPrint);
+
   return ret;
 }
 
@@ -204,8 +220,11 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, const char* val
   cJSON_AddStringToObject(root, "name", name);
   cJSON_AddStringToObject(root, "value", value);
 
-  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  char* jsonPrint = cJSON_Print(root);
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, jsonPrint, 0, 1, 0);
   cJSON_Delete(root);
+  cJSON_free(jsonPrint);
+
   return ret;
 }
 
@@ -218,7 +237,7 @@ int MqttCtrlClass::modulesUpdate() {
   cJSON_AddStringToObject(root, "type", "MODULES_UPDATE");
 
   cJSON* pack = cJSON_CreateArray();
-  for (int i = 0; i < CoreBridge.getModuleNum(); i++)   {
+  for (int i = 0; i < CoreBridge.getModuleNum(); i++) {
     cJSON* m;
     module_t* module = CoreBridge.getModule(i);
 
@@ -233,8 +252,11 @@ int MqttCtrlClass::modulesUpdate() {
 
   cJSON_AddItemToObject(root, "value", pack);
 
-  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  char* jsonPrint = cJSON_Print(root);
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, jsonPrint, 0, 1, 0);
+  cJSON_free(jsonPrint);
   cJSON_Delete(root);
+
   return ret;
 }
 
@@ -250,8 +272,11 @@ int MqttCtrlClass::configurationsUpdate() {
   cJSON_AddStringToObject(root, "serial_number", CoreBridge.serial_number);
   cJSON_AddNumberToObject(root, "enable_pop", CoreBridge.smf_status.enable_pop);
 
-  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  char* jsonPrint = cJSON_Print(root);
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, jsonPrint, 0, 1, 0);
+  cJSON_free(jsonPrint);
   cJSON_Delete(root);
+
   return ret;
 }
 
@@ -264,8 +289,11 @@ int MqttCtrlClass::warehouseAvailableLengthUpdate(uint16_t length) {
   cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_LENGTH_UPDATE");
   cJSON_AddNumberToObject(root, "length", length);
 
-  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  char* jsonPrint = cJSON_Print(root);
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, jsonPrint, 0, 1, 0);
+  cJSON_free(jsonPrint);
   cJSON_Delete(root);
+
   return ret;
 }
 
@@ -278,8 +306,11 @@ int MqttCtrlClass::warehouseRequestBufferUpdate(int* buf, uint8_t length) {
   cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_UPDATE");
   cJSON_AddItemToObject(root, "value", cJSON_CreateIntArray(buf, length));
 
-  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, cJSON_Print(root), 0, 2, 0);
+  char* jsonPrint = cJSON_Print(root);
+  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, jsonPrint, 0, 2, 0);
+  cJSON_free(jsonPrint);
   cJSON_Delete(root);
+
   return ret;
 }
 

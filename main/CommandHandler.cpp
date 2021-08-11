@@ -11,7 +11,7 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
   uint8_t port = command[4];
   uint16_t length = ((command[5] << 8) & 0xff00) | (command[6] & 0xff);
 
-  char* payload = (char*)calloc(length, sizeof(char));
+  char* payload = new char[length];
   memcpy(payload, &command[8], length - 1);
 
   ///// SAMD21 Event /////
@@ -73,8 +73,8 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
       CoreBridge.addModule(index,
                            cJSON_GetObjectItemCaseSensitive(data, "name")->valuestring,
                            0, //type
-                           cJSON_GetObjectItemCaseSensitive(data, "pri")->valuedouble,
-                           cJSON_GetObjectItemCaseSensitive(data, "switch_state")->valuedouble);
+                           cJSON_GetObjectItemCaseSensitive(data, "pri")->valueint,
+                           cJSON_GetObjectItemCaseSensitive(data, "switch_state")->valueint);
 
       if (index == 0) {
         printf("[UART] Total modules: %i\n", totalModules);
@@ -95,6 +95,8 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
         CoreBridge.system_status.module_initialized = true;
         CoreBridge.system_status.module_connected = true;
       }
+
+      cJSON_Delete(data);
       break;
     }
 
@@ -165,8 +167,10 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
     }
   }
 
+  goto end;
+
 end:
-  free(payload);
+  delete[] payload;
 
   response[2] = 1; // number of parameters
   response[3] = 1; // parameter 1 length

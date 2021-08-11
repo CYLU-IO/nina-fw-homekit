@@ -59,7 +59,7 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base,
     s_wifi_status = WL_CONNECTED;
 
     CoreBridge.digitalWrite(WIFI_STATE_PIN, 1);
-    //MqttCtrl.begin();
+    MqttCtrl.begin();
 
     xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
   } else if (event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD) {

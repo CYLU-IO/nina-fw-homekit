@@ -3,8 +3,8 @@
 
 #include "mqtt_client.h"
 
-#define MQTT_URL_STATUS "/CYLU/CordBlock/TW0138WJC9T/12321123/Status"
-#define MQTT_URL_CMD "/CYLU/CordBlock/TW0138WJC9T/12321123/Cmd"
+#define MQTT_URL_STATUS "CYLU/CordBlock/TW0138WJC9T/12321123/Status"
+#define MQTT_URL_CMD "CYLU/CordBlock/TW0138WJC9T/12321123/Cmd"
 
 #define MQTT_CMD_REQUEST_DATA 0x41
 #define MQTT_CMD_DO_ACTION 0x42

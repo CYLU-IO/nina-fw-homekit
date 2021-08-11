@@ -46,8 +46,6 @@ void setup() {
   CoreBridge.addModule(0, "Switch 1", 0, 1, 0);
   CoreBridge.beginHomekit();*/
   //CoreBridge.setModuleValue(0, 1);
-
-  printf("[SKETCH] Initialization Completed\n");
 }
 
 void loop() {
