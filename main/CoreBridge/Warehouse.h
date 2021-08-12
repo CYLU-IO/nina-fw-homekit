@@ -3,15 +3,15 @@
 
 #define EEPROM_I2C_ADDR 0x50
 #define EEPROM_HEAD_ADDR 0x00
-#define EEPROM_BUFFER_LEN 14400
+#define EEPROM_BUFFER_LEN 288 //14400
 
 class WarehouseClass {
 private:
   void write(int val, int addr);
   int read(int addr);
-  int readAsInt16(int addr);
 
 public:
+
   void begin();
 
   int getHeadAddr();
@@ -22,8 +22,11 @@ public:
   void getDataPack(int addr, int& amount, int* buffer);
   void getDataByPage(int page, int& amount, int* buffer);
 
-  void clearStorage();
+  void writeAsInt16(int addr, int value);
+  int readAsInt16(int addr);
 };
+
+void clearStorage(void* param);
 
 extern WarehouseClass Warehouse;
 

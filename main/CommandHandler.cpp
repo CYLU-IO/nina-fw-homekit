@@ -17,8 +17,13 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
   ///// SAMD21 Event /////
   if (port == 255) {
     switch (command[7]) {
-      case 0x00:
+      case 0x00: //SAMD21 init
       {
+        ///// Define Routine Tasks /////
+        xTaskCreate(moduleLiveCheck, "module_live_check", 2048, NULL, 1, NULL);
+        xTaskCreate(recordSumCurrent, "record_sum_current", 2048, NULL, 1, NULL);
+
+        ///// Reconnection Trial /////
         char* p = new char[2]{ CMD_LOAD_MODULE, 0x00 };
         queue.push(1, 2, p);
         break;

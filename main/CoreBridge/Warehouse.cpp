@@ -1,7 +1,6 @@
 #include <stdio.h>
 
 #include <Wire.h>
-
 #include "CoreBridge.h"
 
 void WarehouseClass::begin() {
@@ -71,12 +70,21 @@ void WarehouseClass::getDataByPage(int page, int& amount, int* buffer) {
   this->getDataPack(target_addr, amount, buffer);
 }
 
-void WarehouseClass::clearStorage() {
-  for (int i = 0; i <= EEPROM_BUFFER_LEN + 1 + (EEPROM_HEAD_ADDR + 2); i++) {
-    this->write(0xff, i);
+void clearStorage(void* param) {
+  int endAddr = EEPROM_BUFFER_LEN + (EEPROM_HEAD_ADDR + 2);
+
+  if ((bool)param) {
+    for (int i = 0; i < endAddr; i++)
+      Warehouse.write(0xff, i);
   }
 
-  this->setHeadAddr(0x00);
+  Warehouse.write(0xff, endAddr);
+  Warehouse.write(0xff, endAddr + 1);
+
+  Warehouse.setHeadAddr(0x00);
+
+  printf("[Warehouse] Cleaned\n");
+  vTaskDelete(NULL);
 }
 
 void WarehouseClass::write(int val, int addr) {
@@ -86,8 +94,11 @@ void WarehouseClass::write(int val, int addr) {
 
   Wire.write(val);
   Wire.endTransmission();
+    vTaskDelay(5);
+}
 
-  delay(5);
+void WarehouseClass::writeAsInt16(int addr, int value) {
+  
 }
 
 int WarehouseClass::read(int addr) {

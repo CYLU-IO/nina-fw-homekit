@@ -37,10 +37,6 @@ void setup() {
   CoreBridge.digitalWrite(WIFI_STATE_PIN, 0);
   CoreBridge.digitalWrite(MODULES_STATE_PIN, 0);
 
-  ///// Define Routine Tasks /////
-  xTaskCreate(moduleLiveCheck, "module_live_check", 2048, NULL, 1, NULL);
-  xTaskCreate(recordSumCurrent, "record_sum_current", 2048, NULL, 1, NULL);
-
   /*CoreBridge.createAccessory();
   CoreBridge.addModule(1, "Switch 2", 0, 1, 0);
   CoreBridge.addModule(0, "Switch 1", 0, 1, 0);

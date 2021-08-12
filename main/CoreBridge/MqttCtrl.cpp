@@ -148,6 +148,13 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
               printf("Configure ENABLE_POP to %i\n", event->data[4]);
               break;
             }
+
+            case MQTT_CONFIG_CLEAR_EEPROM:
+            {
+              //Warehouse.clearStorage(false);
+              xTaskCreate(clearStorage, "clear_eeprom", 2048, (void*)false, 1, NULL);
+              break;
+            }
           }
           break;
         }
@@ -322,7 +329,9 @@ int MqttCtrlClass::warehouseRequestBufferUpdate(int* buf, uint8_t length) {
   cJSON* root;
   root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_UPDATE");
-  cJSON_AddItemToObject(root, "value", cJSON_CreateIntArray(buf, length));
+
+  if (length > 0) 
+    cJSON_AddItemToObject(root, "value", cJSON_CreateIntArray(buf, length));
 
   char* jsonPrint = cJSON_Print(root);
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, jsonPrint, 0, 2, 0);
