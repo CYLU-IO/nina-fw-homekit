@@ -39,106 +39,124 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
   switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
-      printf("MQTT_EVENT_CONNECTED\n");
+    {
       msg_id = esp_mqtt_client_subscribe(client, MQTT_URL_CMD, 2);
       s_mqttctrl_status = MQC_CONNECTED;
       break;
+    }
 
     case MQTT_EVENT_DISCONNECTED:
-      printf("MQTT_EVENT_DISCONNECTED\n");
+    {
       s_mqttctrl_status = MQC_DISCONNECTED;
       esp_mqtt_client_reconnect(client);
       break;
+    }
 
     case MQTT_EVENT_SUBSCRIBED:
+    {
       esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":1}", 0, 2, 1);
       break;
+    }
 
     case MQTT_EVENT_UNSUBSCRIBED:
-      printf("MQTT_EVENT_UNSUBSCRIBED\n");
+    {
       esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":0}", 0, 2, 1);
       break;
+    }
 
     case MQTT_EVENT_DATA:
-      printf("MQTT DATA: ");
-      for (int i = 0; i < event->data_len; i++) {
-        printf("%04X ", event->data[i]);
-      }
-      printf("\n");
+    {
+      if (strcmp(event->topic, MQTT_URL_CMD)) break;
 
+      int length = (event->data[1] & 0xff) | (event->data[2] << 8);
 
-      if (strcmp(event->topic, MQTT_URL_CMD) == 0) {
-        int length = (event->data[1] & 0xff) | (event->data[2] << 8);
-
-        switch (event->data[0]) {
-          case MQTT_CMD_REQUEST_DATA:
-            switch (event->data[3]) {
-              case MQTT_DATA_MODULES_DATA:
-                MqttCtrl.modulesUpdate();
-                break;
-
-              case MQTT_DATA_CONFIGURATIONS:
-                MqttCtrl.configurationsUpdate();
-                break;
-
-              case MQTT_DATA_HISTORY_LENGTH:
-                MqttCtrl.warehouseAvailableLengthUpdate(Warehouse.getAvailableLength());
-                break;
-
-              case MQTT_DATA_CURRENT_HISTORY:
-                int buf[144];
-                int buf_length = 144;
-
-                Warehouse.getDataByPage(event->data[4], buf_length, buf);
-                MqttCtrl.warehouseRequestBufferUpdate(buf, (uint8_t)buf_length);
-                break;
+      switch (event->data[0]) {
+        case MQTT_CMD_REQUEST_DATA:
+        {
+          switch (event->data[3]) {
+            case MQTT_DATA_MODULES_DATA:
+            {
+              MqttCtrl.modulesUpdate();
+              break;
             }
-            break;
 
-          case MQTT_CMD_DO_ACTION:
-            for (int i = 0; i < (length - 1) / 2; i++) {
-              switch (event->data[3]) {
-                case MQTT_DATA_SWITCH_STATE:
-                {
-                  uint8_t* addrs = new uint8_t[1]{ (uint8_t)(event->data[i * 2 + 4] + 1) };
-                  uint8_t* acts = new uint8_t[1]{ (uint8_t)(event->data[i * 2 + 5] ? DO_TURN_ON : DO_TURN_OFF) };
+            case MQTT_DATA_CONFIGURATIONS:
+            {
+              MqttCtrl.configurationsUpdate();
+              break;
+            }
 
-                  CoreBridge.doModulesAction(addrs, acts, 1);
-                  //CoreBridge.setModuleSwitchState(event->data[i * 2 + 4], event->data[i * 2 + 5]);
-                  break;
-                }
+            case MQTT_DATA_HISTORY_LENGTH:
+            {
+              MqttCtrl.warehouseAvailableLengthUpdate(Warehouse.getAvailableLength());
+              break;
+            }
 
-                case MQTT_DATA_PRIORITY:
-                {
-                  CoreBridge.setModulePrioirty(event->data[i * 2 + 4], event->data[i * 2 + 5]);
-                  break;
-                }
+            case MQTT_DATA_CURRENT_HISTORY:
+            {
+              int buf[144];
+              int buf_length = 144;
+
+              Warehouse.getDataByPage(event->data[4], buf_length, buf);
+              MqttCtrl.warehouseRequestBufferUpdate(buf, (uint8_t)buf_length);
+              break;
+            }
+          }
+          break;
+        }
+
+        case MQTT_CMD_DO_ACTION:
+        {
+          for (int i = 0; i < (length - 1) / 2; i++) {
+            switch (event->data[3]) {
+              case MQTT_DATA_SWITCH_STATE:
+              {
+                uint8_t* addrs = new uint8_t[1]{ (uint8_t)(event->data[i * 2 + 4] + 1) };
+                uint8_t* acts = new uint8_t[1]{ (uint8_t)(event->data[i * 2 + 5] ? DO_TURN_ON : DO_TURN_OFF) };
+
+                CoreBridge.doModulesAction(addrs, acts, 1);
+                break;
+              }
+
+              case MQTT_DATA_PRIORITY:
+              {
+                CoreBridge.setModulePrioirty(event->data[i * 2 + 4], event->data[i * 2 + 5]);
+                break;
               }
             }
-            break;
+          }
+          break;
+        }
 
-          case MQTT_CMD_CONFIGURE:
-            switch (event->data[3]) {
-              case MQTT_CONFIG_DEVICE_NAME:
-                char device_name[DEVICE_NAME_LENGTH + 1];
-                memset(device_name, 0x00, sizeof(device_name));
-                memcpy(device_name, &event->data[4], length - 1);
+        case MQTT_CMD_CONFIGURE:
+        {
+          switch (event->data[3]) {
+            case MQTT_CONFIG_DEVICE_NAME:
+            {
+              char device_name[DEVICE_NAME_LENGTH + 1];
+              memset(device_name, 0x00, sizeof(device_name));
+              memcpy(device_name, &event->data[4], length - 1);
 
-                CoreBridge.setDeviceName(device_name);
-                printf("Configure DEVICE_NAME to %s\n", device_name);
-                break;
-
-              case MQTT_CONFIG_ENABLE_POP:
-                CoreBridge.setEnablePOP((int8_t)event->data[4]);
-                printf("Configure ENABLE_POP to %i\n", event->data[4]);
-                break;
+              CoreBridge.setDeviceName(device_name);
+              printf("Configure DEVICE_NAME to %s\n", device_name);
+              break;
             }
-            break;
+
+            case MQTT_CONFIG_ENABLE_POP:
+            {
+              CoreBridge.setEnablePOP((int8_t)event->data[4]);
+              printf("Configure ENABLE_POP to %i\n", event->data[4]);
+              break;
+            }
+          }
+          break;
         }
       }
       break;
+    }
 
     case MQTT_EVENT_ERROR:
+    {
       printf("MQTT_EVENT_ERROR\n");
 
       if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
@@ -147,10 +165,10 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
         log_error_if_nonzero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
       }
       break;
+    }
 
     default:
-      //printf("Other event id:%d\n", event->event_id);
-      break;
+    {break;}
   }
 }
 
