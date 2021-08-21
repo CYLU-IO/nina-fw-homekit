@@ -19,7 +19,6 @@ extern "C"
 #include <CommandHandler.h>
 #include "CoreBridge/CoreBridge.h"
 
-
 #define SPI_BUFFER_LEN SPI_MAX_DMA_LEN
 
 uint8_t* commandBuffer;

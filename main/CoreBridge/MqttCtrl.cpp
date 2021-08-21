@@ -88,7 +88,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
             case MQTT_DATA_HISTORY_LENGTH:
             {
-              MqttCtrl.warehouseAvailableLengthUpdate(Warehouse.getAvailableLength());
+              //MqttCtrl.warehouseAvailableLengthUpdate(Warehouse.getAvailableLength());
               break;
             }
 
@@ -97,8 +97,8 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
               int buf[144];
               int buf_length = 144;
 
-              Warehouse.getDataByPage(event->data[4], buf_length, buf);
-              MqttCtrl.warehouseRequestBufferUpdate(buf, (uint8_t)buf_length);
+              //Warehouse.getDataByPage(event->data[4], buf_length, buf);
+              //MqttCtrl.warehouseRequestBufferUpdate(buf, (uint8_t)buf_length);
               break;
             }
           }

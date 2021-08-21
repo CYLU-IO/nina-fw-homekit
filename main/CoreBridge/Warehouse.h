@@ -2,28 +2,38 @@
 #define WAREHOUSE_H
 
 #define EEPROM_I2C_ADDR 0x50
-#define EEPROM_HEAD_ADDR 0x00
-#define EEPROM_BUFFER_LEN 288 //14400
+
+#define EEPROM_CYCLE_RECORD 0x00
+#define EEPROM_DAY_HEAD_PTR 0x03
+#define EEPROM_DATE_HEAD_PTR 0x04
+#define EEPROM_DAY_DATA 0x05
 
 class WarehouseClass {
 private:
-  void write(int val, int addr);
-  int read(int addr);
+  void write(uint8_t val, uint16_t addr);
+  uint8_t read(uint16_t addr);
 
 public:
-
   void begin();
 
-  int getHeadAddr();
-  int setHeadAddr(int addr);
-  int getAvailableLength();
+  uint8_t getDayHeadPtr();
+  void updateDayHeadPtr(uint8_t ptr);
 
-  int appendData(int value);
-  void getDataPack(int addr, int& amount, int* buffer);
-  void getDataByPage(int page, int& amount, int* buffer);
+  uint8_t getDateHeadPtr();
+  void updateDateHeadPtr(uint8_t ptr);
 
-  void writeAsInt16(int addr, int value);
-  int readAsInt16(int addr);
+  void writeDayData(uint16_t current);
+
+    /*int getHeadAddr();
+    int setHeadAddr(int addr);
+    int getAvailableLength();
+
+    int appendData(int value);
+    void getDataPack(int addr, int& amount, int* buffer);
+    void getDataByPage(int page, int& amount, int* buffer);*/
+
+    void writeAsInt16(uint16_t ptr, uint16_t value);
+  uint16_t readAsInt16(uint16_t ptr);
 };
 
 void clearStorage(void* param);

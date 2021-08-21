@@ -21,7 +21,6 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
       {
         ///// Define Routine Tasks /////
         xTaskCreate(moduleLiveCheck, "module_live_check", 2048, NULL, 1, NULL);
-        xTaskCreate(recordSumCurrent, "record_sum_current", 2048, NULL, 1, NULL);
 
         ///// Reconnection Trial /////
         char* p = new char[2]{ CMD_LOAD_MODULE, 0x00 };
@@ -36,6 +35,11 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
 
         nvs_flash_erase();
         esp_restart();
+        break;
+      }
+
+      case 0x02: //Button Tap Event
+      {
         break;
       }
     }

@@ -26,16 +26,14 @@ static int s_wifi_status = 255;
 
 void smarconfig_task(void* parm);
 
-void wifimgr_event_handler(void* arg, esp_event_base_t event_base,
-                               int32_t event_id, void* event_data) {
+void wifimgr_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
     wifi_config_t wifi_config;
     esp_wifi_get_config((wifi_interface_t)WIFI_IF_STA, &wifi_config);
 
+    ///// Connect to Previous Connected Network /////
     if (strlen((const char*)wifi_config.sta.ssid)) {
-      esp_wifi_disconnect();
-      esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
-      esp_wifi_connect();
+      WifiMgr.connect(wifi_config);
     } else {
       xTaskCreate(smarconfig_task, "smarconfig_task", 2048, NULL, 3, NULL);
     }
@@ -51,6 +49,9 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base,
     } else {
       s_wifi_status = WL_CONNECT_FAILED;
       xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+
+      ///// If Continuously Fail Connection, Delete WiFi Info /////
+      WifiMgr.resetNetwork();
     }
 
     xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT);
@@ -58,6 +59,10 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base,
     s_retry_num = 0;
     s_wifi_status = WL_CONNECTED;
 
+    ///// Start Periodic Hourly Tasks /////
+    xTaskCreate(recordSumCurrent, "record_sum_current", 2048, NULL, 1, NULL);
+
+    ///// Remote Control Begins /////
     CoreBridge.digitalWrite(WIFI_STATE_PIN, 1);
     MqttCtrl.begin();
 
@@ -74,22 +79,18 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base,
     memcpy(wifi_config.sta.password, evt->password, sizeof(wifi_config.sta.password));
     wifi_config.sta.bssid_set = evt->bssid_set;
 
-    if (wifi_config.sta.bssid_set == true) {
+    if (wifi_config.sta.bssid_set == true)
       memcpy(wifi_config.sta.bssid, evt->bssid, sizeof(wifi_config.sta.bssid));
-    }
 
     memcpy(ssid, evt->ssid, sizeof(evt->ssid));
     memcpy(password, evt->password, sizeof(evt->password));
 
-    if (evt->type == SC_TYPE_ESPTOUCH_V2) {
-      ESP_ERROR_CHECK(esp_smartconfig_get_rvd_data(rvd_data, sizeof(rvd_data)));
-    }
+    if (evt->type == SC_TYPE_ESPTOUCH_V2)
+      esp_smartconfig_get_rvd_data(rvd_data, sizeof(rvd_data));
 
     s_wifi_status = WL_GOT_SSID_PWD;
 
-    ESP_ERROR_CHECK(esp_wifi_disconnect());
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_connect());
+    WifiMgr.connect(wifi_config);
   } else if (event_base == SC_EVENT && event_id == SC_EVENT_SEND_ACK_DONE) {
     xEventGroupSetBits(s_wifi_event_group, ESPTOUCH_DONE_BIT);
   }
@@ -97,10 +98,10 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base,
 
 void smarconfig_task(void* parm) {
   EventBits_t uxBits;
-  ESP_ERROR_CHECK(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH));
+  esp_smartconfig_set_type(SC_TYPE_ESPTOUCH);
 
   smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_smartconfig_start(&cfg));
+  esp_smartconfig_start(&cfg);
 
   s_wifi_status = WL_START_SCAN;
 
@@ -119,27 +120,35 @@ void smarconfig_task(void* parm) {
 WifiManager::WifiManager() {}
 
 void WifiManager::begin() {
-  ESP_ERROR_CHECK(esp_netif_init());
+  esp_netif_init();
+
   s_wifi_event_group = xEventGroupCreate();
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_event_loop_create_default();
+
   esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
   assert(sta_netif);
 
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  esp_wifi_init(&cfg);
 
-  ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifimgr_event_handler, NULL));
-  ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifimgr_event_handler, NULL));
-  ESP_ERROR_CHECK(esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, &wifimgr_event_handler, NULL));
+  esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifimgr_event_handler, NULL);
+  esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifimgr_event_handler, NULL);
+  esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, &wifimgr_event_handler, NULL);
 
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-  ESP_ERROR_CHECK(esp_wifi_start());
+  esp_wifi_set_mode(WIFI_MODE_STA);
+  esp_wifi_start();
 
   s_wifi_status = WL_IDLE_STATUS;
 }
 
 int WifiManager::getStatus() {
   return s_wifi_status;
+}
+
+void WifiManager::connect(wifi_config_t& config) {
+  esp_wifi_disconnect();
+  esp_wifi_set_config(WIFI_IF_STA, &config);
+  esp_wifi_connect();
 }
 
 void WifiManager::resetNetwork() {

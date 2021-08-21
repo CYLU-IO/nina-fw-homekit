@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+#include <sys/time.h>
+#include "esp_sntp.h"
 
 #include <hap_platform_keystore.h>
 
@@ -200,7 +203,7 @@ void CoreBridgeClass::overloadProtectionCheck() {
 
 void moduleLiveCheck(void*) {
   unsigned long t = millis();
-  bool previous, sent = false;
+  bool sent = false;
 
   while (1) {
     if (!sent && CoreBridge.system_status.module_initialized) {
@@ -208,7 +211,6 @@ void moduleLiveCheck(void*) {
       char* p = new char[1]{ CMD_HI };
       queue.push(1, 1, p);
 
-      previous = CoreBridge.system_status.module_connected;
       CoreBridge.system_status.module_connected = false;
 
       sent = true;
@@ -245,24 +247,67 @@ void moduleLiveCheck(void*) {
 }
 
 void recordSumCurrent(void*) {
-  TickType_t xLastWakeTime = xTaskGetTickCount();
+  ///// Setup SNTP Service /////
+  time_t now;
+  tm timeinfo;
 
-  while (1) {
-    if (CoreBridge.system_status.module_initialized) {
-      ///// 10 Seconds Before Recording, NINA Sends Request First /////
-      CoreBridge.requestModulesData(MODULE_CURRENT);
-      vTaskDelayUntil(&xLastWakeTime, 10000);
+  time(&now);
+  localtime_r(&now, &timeinfo);
 
-      int* buffer = new int[1]{ CoreBridge.system_status.sum_current };
+  if (timeinfo.tm_year < (2016 - 1900)) {
+    printf("Time is not set yet. Setting SNTP.\n");
 
-      Warehouse.appendData(CoreBridge.system_status.sum_current);
-      MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
-      delete[] buffer;
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, "pool.ntp.org");
+    sntp_setservername(1, "time.google.com");
+    sntp_setservername(2, "time.asia.apple.com");
+    sntp_init();
 
-      vTaskDelayUntil(&xLastWakeTime, RECORD_SUM_CURRENT_INTERVAL - 10000);
+    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET) {
+      printf("Waiting for system time to be set...\n");
+      vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 
-    taskYIELD();
+    time(&now);
+  }
+
+  setenv("TZ", "CST-8", 1);
+  tzset();
+  localtime_r(&now, &timeinfo);
+
+  char strftime_buf[64];
+  int previousHr = timeinfo.tm_hour - 1; //TODO: get recorded hour from Warehouse
+
+  while (1) {
+    if (true) { //CoreBridge.system_status.module_initialized
+      time(&now);
+      localtime_r(&now, &timeinfo);
+
+      strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+      printf("The current date/time in Taipei is: %s\n", strftime_buf);
+
+      if (timeinfo.tm_hour != previousHr) {
+
+
+        ///// 10 Seconds Before Recording, NINA Sends Request First /////
+        printf("Taking recordSumCurrent... S1\n");
+        //CoreBridge.requestModulesData(MODULE_CURRENT);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        //int* buffer = new int[1]{ CoreBridge.system_status.sum_current };
+
+        //Warehouse.appendData(CoreBridge.system_status.sum_current);
+        printf("Taking recordSumCurrent... S2\n");
+        //MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
+        //delete[] buffer;
+      }
+
+      printf("Waiting %i minutes...\n", (59 - timeinfo.tm_min));
+      vTaskDelay((60 - timeinfo.tm_min) * 60 * 1000 / portTICK_PERIOD_MS);
+      previousHr = timeinfo.tm_hour;
+    }
+
+    //taskYIELD();
   }
 }
 

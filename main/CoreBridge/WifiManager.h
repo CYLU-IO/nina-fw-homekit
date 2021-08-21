@@ -18,6 +18,8 @@ public:
 
   int getStatus();
 
+  void connect(wifi_config_t& config);
+
   void resetNetwork();
 };
 
