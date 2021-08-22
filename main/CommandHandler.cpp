@@ -40,6 +40,8 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
 
       case 0x02: //Button Tap Event
       {
+        if (WifiMgr.getStatus() == WL_CONNECT_FAILED)
+          WifiMgr.resetNetwork();
         break;
       }
     }

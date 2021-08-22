@@ -49,9 +49,6 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base, int32_t event
     } else {
       s_wifi_status = WL_CONNECT_FAILED;
       xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-
-      ///// If Continuously Fail Connection, Delete WiFi Info /////
-      WifiMgr.resetNetwork();
     }
 
     xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT);
@@ -59,12 +56,12 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base, int32_t event
     s_retry_num = 0;
     s_wifi_status = WL_CONNECTED;
 
-    ///// Start Periodic Hourly Tasks /////
-    xTaskCreate(recordSumCurrent, "record_sum_current", 2048, NULL, 1, NULL);
-
     ///// Remote Control Begins /////
     CoreBridge.digitalWrite(WIFI_STATE_PIN, 1);
     MqttCtrl.begin();
+
+    ///// Start Periodic Hourly Tasks /////
+    xTaskCreate(recordSumCurrent, "record_sum_current", 2048, NULL, 1, NULL);
 
     xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
   } else if (event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD) {

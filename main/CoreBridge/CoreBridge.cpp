@@ -282,13 +282,10 @@ void recordSumCurrent(void*) {
     if (true) { //CoreBridge.system_status.module_initialized
       time(&now);
       localtime_r(&now, &timeinfo);
-
       strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
       printf("The current date/time in Taipei is: %s\n", strftime_buf);
 
       if (timeinfo.tm_hour != previousHr) {
-
-
         ///// 10 Seconds Before Recording, NINA Sends Request First /////
         printf("Taking recordSumCurrent... S1\n");
         //CoreBridge.requestModulesData(MODULE_CURRENT);
@@ -302,12 +299,11 @@ void recordSumCurrent(void*) {
         //delete[] buffer;
       }
 
-      printf("Waiting %i minutes...\n", (59 - timeinfo.tm_min));
-      vTaskDelay((60 - timeinfo.tm_min) * 60 * 1000 / portTICK_PERIOD_MS);
+      time(&now);
+      localtime_r(&now, &timeinfo);
       previousHr = timeinfo.tm_hour;
+      vTaskDelay((60 - timeinfo.tm_min) * 60 * 1000 / portTICK_PERIOD_MS);
     }
-
-    //taskYIELD();
   }
 }
 
