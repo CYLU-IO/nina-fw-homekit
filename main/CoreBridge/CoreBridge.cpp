@@ -247,6 +247,8 @@ void moduleLiveCheck(void*) {
 }
 
 void recordSumCurrent(void*) {
+  Warehouse.formatZero(true);
+
   ///// Setup SNTP Service /////
   time_t now;
   tm timeinfo;
@@ -284,25 +286,43 @@ void recordSumCurrent(void*) {
       localtime_r(&now, &timeinfo);
       strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
       printf("The current date/time in Taipei is: %s\n", strftime_buf);
+      printf("The current year in Taipei is: %i\n", timeinfo.tm_year);
 
       if (timeinfo.tm_hour != previousHr) {
+        if (timeinfo.tm_hour == 0)
+          Warehouse.updateRecordedHourPtr(255);
+
         ///// 10 Seconds Before Recording, NINA Sends Request First /////
         printf("Taking recordSumCurrent... S1\n");
         //CoreBridge.requestModulesData(MODULE_CURRENT);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
 
+        printf("Taking recordSumCurrent... S2\n");
         //int* buffer = new int[1]{ CoreBridge.system_status.sum_current };
 
-        //Warehouse.appendData(CoreBridge.system_status.sum_current);
-        printf("Taking recordSumCurrent... S2\n");
+        CoreBridge.system_status.sum_current = timeinfo.tm_hour;
+        Warehouse.appendHourlyRecord(timeinfo.tm_hour, CoreBridge.system_status.sum_current);
         //MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
         //delete[] buffer;
+
+
+        if (timeinfo.tm_hour == 23) { //New day is coming, summing current records
+          int avg_sum_current = 0;
+
+          for (int i = 0; i < 24; i++)
+            avg_sum_current += Warehouse.readAsInt16(EEPROM_HOUR_DATA_PTR + (i * 2));
+
+          avg_sum_current /= 24;
+
+          printf("Sum current for this day is %i\n", avg_sum_current);
+          Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, avg_sum_current);
+        }
       }
 
       time(&now);
       localtime_r(&now, &timeinfo);
       previousHr = timeinfo.tm_hour;
-      vTaskDelay((60 - timeinfo.tm_min) * 60 * 1000 / portTICK_PERIOD_MS);
+      vTaskDelay((((59 - timeinfo.tm_min) * 60) + (60 - timeinfo.tm_sec)) * 1000 / portTICK_PERIOD_MS);
     }
   }
 }
