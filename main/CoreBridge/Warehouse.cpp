@@ -1,18 +1,27 @@
 #include <stdio.h>
-
 #include <Wire.h>
+#include "cJSON.h"
+
 #include "CoreBridge.h"
 
 void WarehouseClass::begin() {
   Wire.begin();
 }
 
-void WarehouseClass::increaseCycleRecord() {
-  int c = ((this->read(EEPROM_CYCLE_RECORD) << 16) | (this->read(EEPROM_CYCLE_RECORD + 1) << 8) | (this->read(EEPROM_CYCLE_RECORD + 2) & 0xff)) + 1;
+int WarehouseClass::getCycleRecord() {
+  int c = this->read(EEPROM_CYCLE_RECORD) << 16;
+  c |= this->read(EEPROM_CYCLE_RECORD + 1) << 8;
+  c |= this->read(EEPROM_CYCLE_RECORD + 2) & 0xff;
 
-  this->write(EEPROM_CYCLE_RECORD, c >> 16 & 0xff);
-  this->write(EEPROM_CYCLE_RECORD + 1, c >> 8 & 0xff);
-  this->write(EEPROM_CYCLE_RECORD + 2, c & 0xff);
+  return c;
+}
+
+void WarehouseClass::increaseCycleRecord() {
+  int c = this->getCycleRecord() + 1;
+
+  this->write(c >> 16 & 0xff, EEPROM_CYCLE_RECORD);
+  this->write(c >> 8 & 0xff, EEPROM_CYCLE_RECORD + 1);
+  this->write(c & 0xff, EEPROM_CYCLE_RECORD + 2);
 }
 
 uint8_t WarehouseClass::getRecordedHourPtr() {
@@ -32,18 +41,16 @@ void WarehouseClass::updateRecordedDatePtr(uint8_t ptr) {
 }
 
 void WarehouseClass::appendHourlyRecord(uint8_t hr, uint16_t current) {
-  uint8_t designatedHourPtr = this->getRecordedHourPtr();
-  designatedHourPtr = (designatedHourPtr == 255) ? 0 : designatedHourPtr + 1;
+  uint8_t designatedHourPtr = this->getRecordedHourPtr() + 1;
 
   this->write(hr, EEPROM_HOUR_DATA_PTR + (designatedHourPtr * 3));
-  this->writeAsInt16(EEPROM_HOUR_DATA_PTR + (designatedHourPtr * 3) + 1, current);
+  this->writeAsInt16(current, EEPROM_HOUR_DATA_PTR + (designatedHourPtr * 3) + 1);
   this->updateRecordedHourPtr(designatedHourPtr);
   this->increaseCycleRecord();
 }
 
 void WarehouseClass::appendDateRecord(uint8_t yy, uint8_t mm, uint8_t dd, uint16_t avg_current) {
-  uint8_t designatedDatePtr = this->getRecordedDatePtr(); //0~30
-  designatedDatePtr = (designatedDatePtr == 255) ? 0 : designatedDatePtr + 1;
+  uint8_t designatedDatePtr = this->getRecordedDatePtr() + 1; //0~30
 
   if (designatedDatePtr == EEPROM_DATE_RECORD_NUM)  //already complete a loop
     designatedDatePtr = 0;
@@ -56,16 +63,38 @@ void WarehouseClass::appendDateRecord(uint8_t yy, uint8_t mm, uint8_t dd, uint16
 }
 
 void WarehouseClass::formatZero(bool deep) {
-  if (deep)
+  if (deep) {
     this->write(0, EEPROM_CYCLE_RECORD);
+    this->write(0, EEPROM_CYCLE_RECORD + 1);
+    this->write(0, EEPROM_CYCLE_RECORD + 2);
+  }
 
   this->write(255, EEPROM_HOUR_HEAD_PTR);
   this->write(255, EEPROM_DATE_HEAD_PTR);
 
-  this->write(0, EEPROM_DATE_DATA_PTR + (30 * 5));
-  this->write(0, EEPROM_DATE_DATA_PTR + (30 * 5) + 1);
-  this->write(0, EEPROM_DATE_DATA_PTR + (30 * 5) + 2);
-  this->writeAsInt16(0, EEPROM_DATE_DATA_PTR + (30 * 5) + 3);
+  this->write(0, EEPROM_DATE_DATA_PTR + ((EEPROM_DATE_RECORD_NUM - 1) * 5));
+  this->write(0, EEPROM_DATE_DATA_PTR + ((EEPROM_DATE_RECORD_NUM - 1) * 5) + 1);
+  this->write(0, EEPROM_DATE_DATA_PTR + ((EEPROM_DATE_RECORD_NUM - 1) * 5) + 2);
+  this->writeAsInt16(0, EEPROM_DATE_DATA_PTR + ((EEPROM_DATE_RECORD_NUM - 1) * 5) + 3);
+}
+
+int WarehouseClass::getHourDataLength() {
+  uint8_t n = this->getRecordedHourPtr() + 1;
+
+  return n;
+}
+
+int WarehouseClass::getDateDataLength() {
+  uint8_t n = this->getRecordedDatePtr() + 1;
+
+  if (n < EEPROM_DATE_RECORD_NUM && this->read(EEPROM_DATE_DATA_PTR + ((EEPROM_DATE_RECORD_NUM - 1) * 5)) > 0)
+    n += EEPROM_DATE_RECORD_NUM;
+
+  return n;
+}
+
+cJSON* WarehouseClass::parseHourDatainJson(cJSON* r) {
+  
 }
 
 /*
@@ -133,10 +162,10 @@ void WarehouseClass::write(uint8_t val, uint16_t addr) {
 
   Wire.write(val);
   Wire.endTransmission();
-  vTaskDelay(5);
+  vTaskDelay(10 / portTICK_PERIOD_MS);
 }
 
-void WarehouseClass::writeAsInt16(uint16_t ptr, uint16_t value) {
+void WarehouseClass::writeAsInt16(uint16_t value, uint16_t ptr) {
   this->write(value & 0xff, ptr);
   this->write(value >> 8, ptr + 1);
 }

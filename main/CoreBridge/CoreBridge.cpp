@@ -4,6 +4,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include "esp_sntp.h"
+#include "cJSON.h"
 
 #include <hap_platform_keystore.h>
 
@@ -247,8 +248,6 @@ void moduleLiveCheck(void*) {
 }
 
 void recordSumCurrent(void*) {
-  Warehouse.formatZero(true);
-
   ///// Setup SNTP Service /////
   time_t now;
   tm timeinfo;
@@ -277,22 +276,53 @@ void recordSumCurrent(void*) {
   tzset();
   localtime_r(&now, &timeinfo);
 
-  char strftime_buf[64];
+  ///// Warehouse TEST /////
+  Warehouse.formatZero(false);
+
+  //Test Hour Date Insertion
+  printf("Current Hour Data Length: %i\n", Warehouse.getHourDataLength());
+  printf("Cycle Record: %i\n", Warehouse.getCycleRecord());
+  for (int i = 0; i < 24; i++) {
+    Warehouse.appendHourlyRecord(i, i);
+  }
+  printf("Current Hour Data Length: %i\n", Warehouse.getHourDataLength());
+  printf("Cycle Record: %i\n", Warehouse.getCycleRecord());
+
+  //Test Date Data Insertion
+  int n = 0;
+  for (int i = 0; i < Warehouse.getHourDataLength(); i++)
+    n += Warehouse.readAsInt16(EEPROM_HOUR_DATA_PTR + (i * 3) + 1);
+  n /= 24;
+  printf("Sum current for this day %i / %i is %i\n", timeinfo.tm_mon, timeinfo.tm_mday, n);
+  Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, 0, n);
+  printf("Current Date Data Length: %i\n", Warehouse.getDateDataLength());
+
+  //Test Date Length Loop Length
+  for (int i = 0; i < EEPROM_DATE_RECORD_NUM; i++) {
+    Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, 1 + i, n);
+  }
+  printf("Current Date Data Length: %i\n", Warehouse.getDateDataLength());
+  printf("Current Date Data Ptr: %i\n", Warehouse.getRecordedDatePtr());
+
+  //Test Hour Data to Json
+  
+
+  //Test Date Data to Json
+  ///// Warehouse END /////
+
   int previousHr = timeinfo.tm_hour - 1; //TODO: get recorded hour from Warehouse
 
   while (1) {
     if (true) { //CoreBridge.system_status.module_initialized
       time(&now);
       localtime_r(&now, &timeinfo);
-      strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-      printf("The current date/time in Taipei is: %s\n", strftime_buf);
-      printf("The current year in Taipei is: %i\n", timeinfo.tm_year);
 
       if (timeinfo.tm_hour != previousHr) {
         if (timeinfo.tm_hour == 0)
-          Warehouse.updateRecordedHourPtr(255);
+          printf("Warehouse.updateRecordedHourPtr(255)\n");
+        //Warehouse.updateRecordedHourPtr(255);
 
-        ///// 10 Seconds Before Recording, NINA Sends Request First /////
+      ///// 10 Seconds Before Recording, NINA Sends Request First /////
         printf("Taking recordSumCurrent... S1\n");
         //CoreBridge.requestModulesData(MODULE_CURRENT);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
@@ -301,7 +331,7 @@ void recordSumCurrent(void*) {
         //int* buffer = new int[1]{ CoreBridge.system_status.sum_current };
 
         CoreBridge.system_status.sum_current = timeinfo.tm_hour;
-        Warehouse.appendHourlyRecord(timeinfo.tm_hour, CoreBridge.system_status.sum_current);
+        //Warehouse.appendHourlyRecord(timeinfo.tm_hour, CoreBridge.system_status.sum_current);
         //MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
         //delete[] buffer;
 
@@ -309,13 +339,13 @@ void recordSumCurrent(void*) {
         if (timeinfo.tm_hour == 23) { //New day is coming, summing current records
           int avg_sum_current = 0;
 
-          for (int i = 0; i < 24; i++)
-            avg_sum_current += Warehouse.readAsInt16(EEPROM_HOUR_DATA_PTR + (i * 2));
+          for (int i = 0; i < Warehouse.getHourDataLength(); i++)
+            avg_sum_current += Warehouse.readAsInt16(EEPROM_HOUR_DATA_PTR + (i * 3) + 1);
 
           avg_sum_current /= 24;
 
-          printf("Sum current for this day is %i\n", avg_sum_current);
-          Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, avg_sum_current);
+          printf("Sum current for this day %i / %i is %i\n", timeinfo.tm_mon, timeinfo.tm_mday, avg_sum_current);
+          //Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, avg_sum_current);
         }
       }
 

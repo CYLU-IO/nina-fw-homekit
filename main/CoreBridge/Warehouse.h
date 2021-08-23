@@ -18,6 +18,7 @@ private:
 public:
   void begin();
 
+  int getCycleRecord();
   void increaseCycleRecord();
 
   uint8_t getRecordedHourPtr();
@@ -30,7 +31,12 @@ public:
   void appendDateRecord(uint8_t yy, uint8_t mm, uint8_t dd, uint16_t avg_current);
   void formatZero(bool deep);
 
-  void writeAsInt16(uint16_t ptr, uint16_t value);
+  int getHourDataLength();
+  int getDateDataLength();
+
+  cJSON* parseHourDatainJson(cJSON* r);
+
+  void writeAsInt16(uint16_t value, uint16_t ptr);
   uint16_t readAsInt16(uint16_t ptr);
 };
 
