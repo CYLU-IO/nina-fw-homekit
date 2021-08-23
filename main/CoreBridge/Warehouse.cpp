@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <Wire.h>
-#include "cJSON.h"
 
 #include "CoreBridge.h"
 
@@ -10,9 +9,9 @@ void WarehouseClass::begin() {
 
 int WarehouseClass::getCycleRecord() {
   int c = this->read(EEPROM_CYCLE_RECORD) << 16;
+
   c |= this->read(EEPROM_CYCLE_RECORD + 1) << 8;
   c |= this->read(EEPROM_CYCLE_RECORD + 2) & 0xff;
-
   return c;
 }
 
@@ -88,70 +87,87 @@ int WarehouseClass::getDateDataLength() {
   uint8_t n = this->getRecordedDatePtr() + 1;
 
   if (n < EEPROM_DATE_RECORD_NUM && this->read(EEPROM_DATE_DATA_PTR + ((EEPROM_DATE_RECORD_NUM - 1) * 5)) > 0)
-    n += EEPROM_DATE_RECORD_NUM;
+    n = EEPROM_DATE_RECORD_NUM;
 
   return n;
 }
 
-cJSON* WarehouseClass::parseHourDatainJson(cJSON* r) {
-  
-}
+cJSON* WarehouseClass::parseHourDatainJson() {
+  cJSON* root;
+  root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_UPDATE");
+  cJSON_AddStringToObject(root, "scale", "Hour");
 
-/*
-int WarehouseClass::getAvailableLength() {
-  return (this->getHeadAddr() / 2) + (this->readAsInt16((EEPROM_HEAD_ADDR + 2) + EEPROM_BUFFER_LEN) == 65535 ? 0 : EEPROM_BUFFER_LEN / 2);
-}
+  cJSON* timeArr = cJSON_CreateArray();
+  cJSON* dataArr = cJSON_CreateArray();
 
-int WarehouseClass::appendData(int value) {
-  int addr = this->getHeadAddr() + 2;
-
-  if (addr > EEPROM_BUFFER_LEN + (EEPROM_HEAD_ADDR + 2))
-    addr = EEPROM_HEAD_ADDR + 2;
-
-  this->write(value & 0xff, addr);
-  this->write((value >> 8) & 0xff, addr + 1);
-
-  return this->setHeadAddr(addr);
-}
-
-void WarehouseClass::getDataPack(int addr, int& amount, int* buffer) {
-  int head_addr = this->getHeadAddr();
-  int warehouse_length = this->getAvailableLength();
-
-  if (amount > warehouse_length)
-    amount = warehouse_length;
-
-  //amount: 144
-  for (int i = 0; i < amount; i++) {
-    if (head_addr / 2 <= i)
-      addr = EEPROM_BUFFER_LEN / 2 + (EEPROM_HEAD_ADDR + 2);
-
-    buffer[i] = this->readAsInt16(addr - (i * 2));
-  }
-}
-
-void WarehouseClass::getDataByPage(int page, int& amount, int* buffer) {
-  int head_addr = this->getHeadAddr();
-  int warehouse_length = this->getAvailableLength();
-
-  int last_data_addr = 0x00;
-  if (warehouse_length * 2 > head_addr) {
-    last_data_addr = EEPROM_BUFFER_LEN - (warehouse_length * 2 - head_addr);
+  for (int i = 0; i < this->getHourDataLength(); i++) {
+    cJSON* t;
+    cJSON* d;
+    cJSON_AddItemToArray(timeArr, t = cJSON_CreateNumber(this->read(EEPROM_HOUR_DATA_PTR + (i * 3))));
+    cJSON_AddItemToArray(dataArr, d = cJSON_CreateNumber(this->readAsInt16(EEPROM_HOUR_DATA_PTR + (i * 3) + 1)));
   }
 
-  int constant_amount = amount;
+  cJSON_AddItemToObject(root, "time", timeArr);
+  cJSON_AddItemToObject(root, "data", dataArr);
 
-  if (warehouse_length - (constant_amount * page) < constant_amount) {
-    amount = warehouse_length - (constant_amount * page);
+  return root;
+}
+
+cJSON* WarehouseClass::parseDateDatainJson() {
+  uint8_t length = this->getDateDataLength();
+  uint8_t dataPtr = this->getRecordedDatePtr();
+
+  cJSON* root;
+  root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_UPDATE");
+  cJSON_AddStringToObject(root, "scale", "Date");
+
+  cJSON* timeArr = cJSON_CreateArray();
+  cJSON* dataArr = cJSON_CreateArray();
+
+  if (length == EEPROM_DATE_RECORD_NUM && dataPtr < EEPROM_DATE_RECORD_NUM) {
+    for (int i = dataPtr + 1; i < EEPROM_DATE_RECORD_NUM; i++) {
+      cJSON* t;
+      cJSON* d;
+
+      char* dateStr = new char[10];
+      sprintf(dateStr, "%i-%i-%i",
+      (1900 + this->read(EEPROM_DATE_DATA_PTR + (i * 5))),
+      (this->read(EEPROM_DATE_DATA_PTR + (i * 5) + 1) + 1),
+      this->read(EEPROM_DATE_DATA_PTR + (i * 5) + 2));
+
+      cJSON_AddItemToArray(timeArr, t = cJSON_CreateString(dateStr));
+      cJSON_AddItemToArray(dataArr, d = cJSON_CreateNumber(this->readAsInt16(EEPROM_DATE_DATA_PTR + (i * 5) + 3)));
+
+      delete[] dateStr;
+    }
   }
 
-  int target_addr = last_data_addr + (constant_amount * 2) + (constant_amount * 2 * (page - 1)) + (amount * 2);
+  for (int i = 0; i < dataPtr + 1; i++) {
+    cJSON* t;
+    cJSON* d;
 
-  this->getDataPack(target_addr, amount, buffer);
-}*/
+    char* dateStr = new char[10];
+    sprintf(dateStr, "%i-%i-%i",
+    (1900 + this->read(EEPROM_DATE_DATA_PTR + (i * 5))),
+    (this->read(EEPROM_DATE_DATA_PTR + (i * 5) + 1) + 1),
+    this->read(EEPROM_DATE_DATA_PTR + (i * 5) + 2));
+
+    cJSON_AddItemToArray(timeArr, t = cJSON_CreateString(dateStr));
+    cJSON_AddItemToArray(dataArr, d = cJSON_CreateNumber(this->readAsInt16(EEPROM_DATE_DATA_PTR + (i * 5) + 3)));
+
+    delete[] dateStr;
+  }
+
+  cJSON_AddItemToObject(root, "time", timeArr);
+  cJSON_AddItemToObject(root, "data", dataArr);
+
+  return root;
+}
 
 void clearStorage(void* param) {
-
+  Warehouse.formatZero(false);
   vTaskDelete(NULL);
 }
 
@@ -159,7 +175,6 @@ void WarehouseClass::write(uint8_t val, uint16_t addr) {
   Wire.beginTransmission(EEPROM_I2C_ADDR);
   Wire.write((int)(addr >> 8));   // MSB
   Wire.write((int)(addr & 0xff)); // LSB
-
   Wire.write(val);
   Wire.endTransmission();
   vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -177,7 +192,6 @@ uint8_t WarehouseClass::read(uint16_t addr) {
   Wire.write((int)(addr >> 8));   // MSB
   Wire.write((int)(addr & 0xff)); // LSB
   Wire.endTransmission();
-
   Wire.requestFrom(EEPROM_I2C_ADDR, 1);
 
   if (Wire.available())

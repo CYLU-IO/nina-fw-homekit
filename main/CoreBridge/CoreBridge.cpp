@@ -283,7 +283,7 @@ void recordSumCurrent(void*) {
   printf("Current Hour Data Length: %i\n", Warehouse.getHourDataLength());
   printf("Cycle Record: %i\n", Warehouse.getCycleRecord());
   for (int i = 0; i < 24; i++) {
-    Warehouse.appendHourlyRecord(i, i);
+    Warehouse.appendHourlyRecord(24 - i, i);
   }
   printf("Current Hour Data Length: %i\n", Warehouse.getHourDataLength());
   printf("Cycle Record: %i\n", Warehouse.getCycleRecord());
@@ -293,21 +293,30 @@ void recordSumCurrent(void*) {
   for (int i = 0; i < Warehouse.getHourDataLength(); i++)
     n += Warehouse.readAsInt16(EEPROM_HOUR_DATA_PTR + (i * 3) + 1);
   n /= 24;
-  printf("Sum current for this day %i / %i is %i\n", timeinfo.tm_mon, timeinfo.tm_mday, n);
+  //printf("Sum current for this day %i / %i is %i\n", timeinfo.tm_mon, timeinfo.tm_mday, n);
   Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, 0, n);
-  printf("Current Date Data Length: %i\n", Warehouse.getDateDataLength());
+  //printf("Current Date Data Length: %i\n", Warehouse.getDateDataLength());
 
   //Test Date Length Loop Length
   for (int i = 0; i < EEPROM_DATE_RECORD_NUM; i++) {
     Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, 1 + i, n);
   }
   printf("Current Date Data Length: %i\n", Warehouse.getDateDataLength());
-  printf("Current Date Data Ptr: %i\n", Warehouse.getRecordedDatePtr());
+  //printf("Current Date Data Ptr: %i\n", Warehouse.getRecordedDatePtr());
 
   //Test Hour Data to Json
-  
+  cJSON* root = Warehouse.parseHourDatainJson();
+  char* jsonPrint = cJSON_Print(root); //cJSON_PrintUnformatted
+  printf("Hour Data in JSON: %s\n", jsonPrint);
+  cJSON_free(jsonPrint);
+  cJSON_Delete(root);
 
   //Test Date Data to Json
+  root = Warehouse.parseDateDatainJson();
+  jsonPrint = cJSON_Print(root); //cJSON_PrintUnformatted
+  printf("Date Data in JSON: %s\n", jsonPrint);
+  cJSON_free(jsonPrint);
+  cJSON_Delete(root);
   ///// Warehouse END /////
 
   int previousHr = timeinfo.tm_hour - 1; //TODO: get recorded hour from Warehouse

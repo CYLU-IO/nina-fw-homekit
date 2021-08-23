@@ -1,6 +1,8 @@
 #ifndef WAREHOUSE_H
 #define WAREHOUSE_H
 
+#include "cJSON.h"
+
 #define EEPROM_I2C_ADDR 0x50
 
 #define EEPROM_CYCLE_RECORD 0x00
@@ -34,7 +36,8 @@ public:
   int getHourDataLength();
   int getDateDataLength();
 
-  cJSON* parseHourDatainJson(cJSON* r);
+  cJSON* parseHourDatainJson();
+  cJSON* parseDateDatainJson();
 
   void writeAsInt16(uint16_t value, uint16_t ptr);
   uint16_t readAsInt16(uint16_t ptr);
