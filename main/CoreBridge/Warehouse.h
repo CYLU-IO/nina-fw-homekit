@@ -2,6 +2,7 @@
 #define WAREHOUSE_H
 
 #include "cJSON.h"
+#include <time.h>
 
 #define EEPROM_I2C_ADDR 0x50
 
@@ -12,10 +13,12 @@
 #define EEPROM_DATE_DATA_PTR 0x4d //Minimum space: 5 * 31
 #define EEPROM_DATE_RECORD_NUM 31
 
+#define EEPROM_LOGS_HEAD_PTR 0xe8
+#define EEPROM_LOGS_DATA_PTR 0xe9
+#define EEPROM_LOGS_NUM 10
+
 class WarehouseClass {
 private:
-  void write(uint8_t val, uint16_t addr);
-  uint8_t read(uint16_t addr);
 
 public:
   void begin();
@@ -39,7 +42,12 @@ public:
   cJSON* parseHourDatainJson();
   cJSON* parseDateDatainJson();
 
+  bool isLastDateDataToday(tm* timeinfo);
+
+  void write(uint8_t val, uint16_t addr);
   void writeAsInt16(uint16_t value, uint16_t ptr);
+
+  uint8_t read(uint16_t addr);
   uint16_t readAsInt16(uint16_t ptr);
 };
 

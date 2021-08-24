@@ -277,7 +277,7 @@ void recordSumCurrent(void*) {
   localtime_r(&now, &timeinfo);
 
   ///// Warehouse TEST /////
-  Warehouse.formatZero(false);
+  /*Warehouse.formatZero(false);
 
   //Test Hour Date Insertion
   printf("Current Hour Data Length: %i\n", Warehouse.getHourDataLength());
@@ -312,14 +312,38 @@ void recordSumCurrent(void*) {
   cJSON_Delete(root);
 
   //Test Date Data to Json
-  root = Warehouse.parseDateDatainJson();
-  jsonPrint = cJSON_Print(root); //cJSON_PrintUnformatted
+  cJSON*root = Warehouse.parseDateDatainJson();
+  char* jsonPrint = cJSON_Print(root); //cJSON_PrintUnformatted
   printf("Date Data in JSON: %s\n", jsonPrint);
   cJSON_free(jsonPrint);
-  cJSON_Delete(root);
+  cJSON_Delete(root);*/
+
+  //Insert Warning into Logs
+
+
+  //Test Logs Data to Json
+
+  //Remove All Logs
   ///// Warehouse END /////
 
-  int previousHr = timeinfo.tm_hour - 1; //TODO: get recorded hour from Warehouse
+  ///// Sum Current if Not Today /////
+  if (Warehouse.getDateDataLength() > 0 && !Warehouse.isLastDateDataToday(&timeinfo)) {
+    int avg_sum_current = 0;
+
+    for (int i = 0; i < Warehouse.getHourDataLength(); i++)
+      avg_sum_current += Warehouse.readAsInt16(EEPROM_HOUR_DATA_PTR + (i * 3) + 1);
+
+    avg_sum_current /= 24;
+    Warehouse.writeAsInt16(avg_sum_current, EEPROM_DATE_DATA_PTR + (Warehouse.getRecordedDatePtr() * 5) + 3);
+    Warehouse.updateRecordedHourPtr(255);
+    Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, 0);
+  }
+
+  ///// Check Hour Conflict //////
+  int previousHr = Warehouse.getRecordedHourPtr();
+
+  previousHr = (previousHr == 255) ? 255 : Warehouse.read(EEPROM_HOUR_DATA_PTR + (previousHr * 3));
+  printf("previousHr: %i\n", previousHr);
 
   while (1) {
     if (true) { //CoreBridge.system_status.module_initialized
@@ -327,22 +351,24 @@ void recordSumCurrent(void*) {
       localtime_r(&now, &timeinfo);
 
       if (timeinfo.tm_hour != previousHr) {
+        ///// Restart Daily Current Record /////
         if (timeinfo.tm_hour == 0)
-          printf("Warehouse.updateRecordedHourPtr(255)\n");
-        //Warehouse.updateRecordedHourPtr(255);
+          Warehouse.updateRecordedHourPtr(255);
 
-      ///// 10 Seconds Before Recording, NINA Sends Request First /////
-        printf("Taking recordSumCurrent... S1\n");
+        if (!Warehouse.isLastDateDataToday(&timeinfo))
+          Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, 0);
+
+        ///// 10 Seconds Before Recording, NINA Sends Request First /////
+        printf("Request Current Data through UART\n");
         //CoreBridge.requestModulesData(MODULE_CURRENT);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-        printf("Taking recordSumCurrent... S2\n");
-        //int* buffer = new int[1]{ CoreBridge.system_status.sum_current };
-
         CoreBridge.system_status.sum_current = timeinfo.tm_hour;
-        //Warehouse.appendHourlyRecord(timeinfo.tm_hour, CoreBridge.system_status.sum_current);
+        int* buffer = new int[1]{ CoreBridge.system_status.sum_current };
+
+        Warehouse.appendHourlyRecord(timeinfo.tm_hour, CoreBridge.system_status.sum_current);
         //MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
-        //delete[] buffer;
+        delete[] buffer;
 
 
         if (timeinfo.tm_hour == 23) { //New day is coming, summing current records
@@ -351,15 +377,30 @@ void recordSumCurrent(void*) {
           for (int i = 0; i < Warehouse.getHourDataLength(); i++)
             avg_sum_current += Warehouse.readAsInt16(EEPROM_HOUR_DATA_PTR + (i * 3) + 1);
 
-          avg_sum_current /= 24;
+          avg_sum_current /= Warehouse.getHourDataLength();
 
           printf("Sum current for this day %i / %i is %i\n", timeinfo.tm_mon, timeinfo.tm_mday, avg_sum_current);
-          //Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, avg_sum_current);
+          Warehouse.writeAsInt16(avg_sum_current, EEPROM_DATE_DATA_PTR + (Warehouse.getRecordedDatePtr() * 5) + 3);
         }
       }
 
       time(&now);
       localtime_r(&now, &timeinfo);
+
+      //Test Hour Data to Json
+      cJSON* root = Warehouse.parseHourDatainJson();
+      char* jsonPrint = cJSON_Print(root); //cJSON_PrintUnformatted
+      printf("Hour Data in JSON: %s\n", jsonPrint);
+      cJSON_free(jsonPrint);
+      cJSON_Delete(root);
+
+      //Test Date Data to Json
+      root = Warehouse.parseDateDatainJson();
+      jsonPrint = cJSON_Print(root); //cJSON_PrintUnformatted
+      printf("Date Data in JSON: %s\n", jsonPrint);
+      cJSON_free(jsonPrint);
+      cJSON_Delete(root);
+
       previousHr = timeinfo.tm_hour;
       vTaskDelay((((59 - timeinfo.tm_min) * 60) + (60 - timeinfo.tm_sec)) * 1000 / portTICK_PERIOD_MS);
     }

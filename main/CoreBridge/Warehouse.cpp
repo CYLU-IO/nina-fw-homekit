@@ -23,6 +23,7 @@ void WarehouseClass::increaseCycleRecord() {
   this->write(c & 0xff, EEPROM_CYCLE_RECORD + 2);
 }
 
+///// Current Recorder /////
 uint8_t WarehouseClass::getRecordedHourPtr() {
   return this->read(EEPROM_HOUR_HEAD_PTR);
 }
@@ -144,20 +145,22 @@ cJSON* WarehouseClass::parseDateDatainJson() {
     }
   }
 
-  for (int i = 0; i < dataPtr + 1; i++) {
-    cJSON* t;
-    cJSON* d;
+  if (this->getDateDataLength() > 0) {
+    for (int i = 0; i < dataPtr + 1; i++) {
+      cJSON* t;
+      cJSON* d;
 
-    char* dateStr = new char[10];
-    sprintf(dateStr, "%i-%i-%i",
-    (1900 + this->read(EEPROM_DATE_DATA_PTR + (i * 5))),
-    (this->read(EEPROM_DATE_DATA_PTR + (i * 5) + 1) + 1),
-    this->read(EEPROM_DATE_DATA_PTR + (i * 5) + 2));
+      char* dateStr = new char[10];
+      sprintf(dateStr, "%i-%i-%i",
+      (1900 + this->read(EEPROM_DATE_DATA_PTR + (i * 5))),
+      (this->read(EEPROM_DATE_DATA_PTR + (i * 5) + 1) + 1),
+      this->read(EEPROM_DATE_DATA_PTR + (i * 5) + 2));
 
-    cJSON_AddItemToArray(timeArr, t = cJSON_CreateString(dateStr));
-    cJSON_AddItemToArray(dataArr, d = cJSON_CreateNumber(this->readAsInt16(EEPROM_DATE_DATA_PTR + (i * 5) + 3)));
+      cJSON_AddItemToArray(timeArr, t = cJSON_CreateString(dateStr));
+      cJSON_AddItemToArray(dataArr, d = cJSON_CreateNumber(this->readAsInt16(EEPROM_DATE_DATA_PTR + (i * 5) + 3)));
 
-    delete[] dateStr;
+      delete[] dateStr;
+    }
   }
 
   cJSON_AddItemToObject(root, "time", timeArr);
@@ -166,11 +169,38 @@ cJSON* WarehouseClass::parseDateDatainJson() {
   return root;
 }
 
+bool WarehouseClass::isLastDateDataToday(tm* timeinfo) {
+  uint8_t dateDataPtr = this->getRecordedDatePtr();
+
+  if (dateDataPtr < EEPROM_DATE_RECORD_NUM &&
+    timeinfo->tm_year == this->read(EEPROM_DATE_DATA_PTR + (dateDataPtr * 5)) &&
+    timeinfo->tm_mon == this->read(EEPROM_DATE_DATA_PTR + (dateDataPtr * 5) + 1) &&
+    timeinfo->tm_mday == this->read(EEPROM_DATE_DATA_PTR + (dateDataPtr * 5) + 2)) {
+    return true;
+  }
+
+  return false;
+}
+
 void clearStorage(void* param) {
   Warehouse.formatZero(false);
   vTaskDelete(NULL);
 }
 
+///// Logging System /////
+/*uint8_t WarehouseClass::getLogHeadPtr() {
+
+}
+
+void WarehouseClass::updateLogHeadPtr(uint8_t ptr) {
+
+}
+
+void WarehouseClass::appendLog(tm* timeinfo, uint8_t type, ) {
+
+}*/
+
+///// Essentials /////
 void WarehouseClass::write(uint8_t val, uint16_t addr) {
   Wire.beginTransmission(EEPROM_I2C_ADDR);
   Wire.write((int)(addr >> 8));   // MSB
