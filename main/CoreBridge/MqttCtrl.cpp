@@ -68,6 +68,8 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
     {
       if (strcmp(event->topic, MQTT_URL_CMD)) break;
 
+      printf("Receive MQTT request\n");
+
       int length = (event->data[1] & 0xff) | (event->data[2] << 8);
 
       switch (event->data[0]) {
@@ -86,19 +88,9 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
               break;
             }
 
-            case MQTT_DATA_HISTORY_LENGTH:
-            {
-              //MqttCtrl.warehouseAvailableLengthUpdate(Warehouse.getAvailableLength());
-              break;
-            }
-
             case MQTT_DATA_CURRENT_HISTORY:
             {
-              int buf[144];
-              int buf_length = 144;
-
-              //Warehouse.getDataByPage(event->data[4], buf_length, buf);
-              //MqttCtrl.warehouseRequestBufferUpdate(buf, (uint8_t)buf_length);
+              MqttCtrl.warehouseDataUpdate(event->data[4]);
               break;
             }
           }
@@ -151,7 +143,6 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
             case MQTT_CONFIG_CLEAR_EEPROM:
             {
-              //Warehouse.clearStorage(false);
               xTaskCreate(clearStorage, "clear_eeprom", 2048, (void*)false, 1, NULL);
               break;
             }
@@ -216,8 +207,10 @@ int MqttCtrlClass::stop() {
 }
 
 int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, int value) {
-  if (s_mqttctrl_status != MQC_CONNECTED)
+  if (s_mqttctrl_status != MQC_CONNECTED) {
+    this->reconnect();
     return ESP_FAIL;
+  }
 
   cJSON* root;
   root = cJSON_CreateObject();
@@ -235,8 +228,10 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, int value) {
 }
 
 int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, const char* value) {
-  if (s_mqttctrl_status != MQC_CONNECTED)
+  if (s_mqttctrl_status != MQC_CONNECTED) {
+    this->reconnect();
     return ESP_FAIL;
+  }
 
   cJSON* root;
   root = cJSON_CreateObject();
@@ -254,8 +249,10 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, const char* val
 }
 
 int MqttCtrlClass::modulesUpdate() {
-  if (s_mqttctrl_status != MQC_CONNECTED)
+  if (s_mqttctrl_status != MQC_CONNECTED) {
+    this->reconnect();
     return ESP_FAIL;
+  }
 
   cJSON* root;
   root = cJSON_CreateObject();
@@ -286,8 +283,10 @@ int MqttCtrlClass::modulesUpdate() {
 }
 
 int MqttCtrlClass::configurationsUpdate() {
-  if (s_mqttctrl_status != MQC_CONNECTED)
+  if (s_mqttctrl_status != MQC_CONNECTED) {
+    this->reconnect();
     return ESP_FAIL;
+  }
 
   cJSON* root;
   root = cJSON_CreateObject();
@@ -305,39 +304,31 @@ int MqttCtrlClass::configurationsUpdate() {
   return ret;
 }
 
-int MqttCtrlClass::warehouseAvailableLengthUpdate(uint16_t length) {
-  if (s_mqttctrl_status != MQC_CONNECTED)
+int MqttCtrlClass::warehouseDataUpdate(uint8_t type) {
+  if (s_mqttctrl_status != MQC_CONNECTED) {
+    this->reconnect();
     return ESP_FAIL;
+  }
 
   cJSON* root;
-  root = cJSON_CreateObject();
-  cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_LENGTH_UPDATE");
-  cJSON_AddNumberToObject(root, "length", length);
 
-  char* jsonPrint = cJSON_Print(root);
-  int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, jsonPrint, 0, 1, 0);
-  cJSON_free(jsonPrint);
-  cJSON_Delete(root);
+  switch (type) {
+    case 0x00: { //hour
+      root = Warehouse.parseHourDatainJson();
+      break;
+    }
 
-  return ret;
-}
+    default: { //date
+      root = Warehouse.parseDateDatainJson();
+      break;
+    }
+  }
 
-int MqttCtrlClass::warehouseRequestBufferUpdate(int* buf, uint8_t length) {
-  if (s_mqttctrl_status != MQC_CONNECTED)
-    return ESP_FAIL;
-
-  cJSON* root;
-  root = cJSON_CreateObject();
-  cJSON_AddStringToObject(root, "type", "CURRENT_HISTORY_UPDATE");
-
-  if (length > 0) 
-    cJSON_AddItemToObject(root, "value", cJSON_CreateIntArray(buf, length));
-
-  char* jsonPrint = cJSON_Print(root);
+  char* jsonPrint = cJSON_PrintUnformatted(root);
   int ret = esp_mqtt_client_publish(client, MQTT_URL_STATUS, jsonPrint, 0, 2, 0);
+
   cJSON_free(jsonPrint);
   cJSON_Delete(root);
-
   return ret;
 }
 

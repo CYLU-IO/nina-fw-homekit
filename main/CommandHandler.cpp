@@ -20,7 +20,9 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
       case 0x00: //SAMD21 init
       {
         ///// Define Routine Tasks /////
-        xTaskCreate(moduleLiveCheck, "module_live_check", 2048, NULL, 1, NULL);
+        xTaskCreate(productLifetimeCounter, "custom_plc", 2048, NULL, 1, NULL);
+        xTaskCreate(moduleLiveCheck, "custom_mlc", 2048, NULL, 1, NULL);
+        xTaskCreate(avgSystemCurrentCalc, "custom_ascc", 2048, NULL, 1, NULL);
 
         ///// Reconnection Trial /////
         char* p = new char[2]{ CMD_LOAD_MODULE, 0x00 };
@@ -137,7 +139,6 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
           if (value >= CoreBridge.getModule(addr - 1)->current + CoreBridge.smf_status.mcub) {
             //printf("[SMF] MCUB Triggered by module %i\n", addr);
             CoreBridge.smf_status.overload_triggered_addr = addr;
-            CoreBridge.overloadProtectionCheck();
           }
 
           ///// Update module current data /////
@@ -148,6 +149,8 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
           for (int i = 0; i < CoreBridge.system_status.num_modules; i++)
             sum += CoreBridge.getModule(i)->current;
           CoreBridge.system_status.sum_current = sum;
+          CoreBridge.overloadProtectionCheck();
+          //printf("[SMF] System Current: %i\n", sum);
 
           ///// Update MCUB /////
           int mcub = (MAX_CURRENT - sum) / CoreBridge.system_status.num_modules;

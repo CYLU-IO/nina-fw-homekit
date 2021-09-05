@@ -9,6 +9,7 @@
 #include <MqttCtrl.h>
 #include <WifiManager.h>
 #include <Warehouse.h>
+#include <Perioder.h>
 #include <CommandHandler.h>
 
 typedef struct {
@@ -71,9 +72,6 @@ public:
 
   void overloadProtectionCheck();
 };
-
-void moduleLiveCheck(void*);
-void recordSumCurrent(void*);
 
 extern CoreBridgeClass CoreBridge;
 
