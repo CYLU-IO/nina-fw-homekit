@@ -20,9 +20,8 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
       case 0x00: //SAMD21 init
       {
         ///// Define Routine Tasks /////
-        xTaskCreate(productLifetimeCounter, "custom_plc", 2048, NULL, 1, NULL);
-        xTaskCreate(moduleLiveCheck, "custom_mlc", 2048, NULL, 1, NULL);
-        xTaskCreate(avgSystemCurrentCalc, "custom_ascc", 2048, NULL, 1, NULL);
+        //xTaskCreate(productLifetimeCounter, "custom_plc", 2048, NULL, 1, NULL);
+        //xTaskCreate(moduleLiveCheck, "custom_mlc", 2048, NULL, 1, NULL);
 
         ///// Reconnection Trial /////
         char* p = new char[2]{ CMD_LOAD_MODULE, 0x00 };
@@ -90,6 +89,9 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
                            cJSON_GetObjectItemCaseSensitive(data, "switch_state")->valueint);
 
       if (index == 0) {
+        if (CoreBridge.system_status.reset2factorying)
+          xTaskCreate(clearStorage, "reset2factory", 2048, NULL, 10, NULL);
+
         printf("[UART] Total modules: %i\n", totalModules);
         ///// Initialize connected modules /////
         char* p = new char[totalModules + 1]{ CMD_INIT_MODULE };

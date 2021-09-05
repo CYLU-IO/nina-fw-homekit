@@ -182,8 +182,20 @@ bool WarehouseClass::isLastDateDataToday(tm* timeinfo) {
   return false;
 }
 
-void clearStorage(void* param) {
+void clearStorage(void*) {
+  time_t now;
+  tm timeinfo;
+
   Warehouse.formatZero(false);
+
+  time(&now);
+  localtime_r(&now, &timeinfo);
+  Warehouse.appendHourlyRecord(timeinfo.tm_hour, CoreBridge.system_status.sum_current);
+  Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, 0);
+  
+  MqttCtrl.warehouseDataUpdate(0);
+  MqttCtrl.warehouseDataUpdate(1);
+  CoreBridge.system_status.reset2factorying = 0;
   vTaskDelete(NULL);
 }
 

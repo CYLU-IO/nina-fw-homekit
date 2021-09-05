@@ -33,6 +33,7 @@ typedef struct {
   uint16_t sum_current;
   bool module_initialized;
   bool module_connected;
+  bool reset2factorying;
 } system_status_t;
 
 class CoreBridgeClass {
@@ -57,6 +58,8 @@ public:
   int removeModules();
 
   int digitalWrite(uint8_t pin, uint8_t state);
+  int reset2Factory();
+  void restart();
 
   int requestModulesData(uint8_t type);
   int updateModulesData(uint8_t type, uint8_t* addrs, uint16_t* values, uint8_t length);

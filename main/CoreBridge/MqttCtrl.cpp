@@ -141,9 +141,10 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
               break;
             }
 
-            case MQTT_CONFIG_CLEAR_EEPROM:
+            case MQTT_CONFIG_RESET_TO_FACTORY:
             {
-              xTaskCreate(clearStorage, "clear_eeprom", 2048, (void*)false, 1, NULL);
+              CoreBridge.system_status.reset2factorying = true;
+              CoreBridge.reset2Factory();
               break;
             }
           }
@@ -207,6 +208,9 @@ int MqttCtrlClass::stop() {
 }
 
 int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, int value) {
+  if (WifiMgr.getStatus() != WL_CONNECTED)
+    return ESP_FAIL;
+
   if (s_mqttctrl_status != MQC_CONNECTED) {
     this->reconnect();
     return ESP_FAIL;
@@ -228,6 +232,9 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, int value) {
 }
 
 int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, const char* value) {
+  if (WifiMgr.getStatus() != WL_CONNECTED)
+    return ESP_FAIL;
+
   if (s_mqttctrl_status != MQC_CONNECTED) {
     this->reconnect();
     return ESP_FAIL;
@@ -249,6 +256,9 @@ int MqttCtrlClass::moduleUpdate(uint8_t index, const char* name, const char* val
 }
 
 int MqttCtrlClass::modulesUpdate() {
+  if (WifiMgr.getStatus() != WL_CONNECTED)
+    return ESP_FAIL;
+
   if (s_mqttctrl_status != MQC_CONNECTED) {
     this->reconnect();
     return ESP_FAIL;
@@ -283,6 +293,9 @@ int MqttCtrlClass::modulesUpdate() {
 }
 
 int MqttCtrlClass::configurationsUpdate() {
+  if (WifiMgr.getStatus() != WL_CONNECTED)
+    return ESP_FAIL;
+
   if (s_mqttctrl_status != MQC_CONNECTED) {
     this->reconnect();
     return ESP_FAIL;
@@ -305,6 +318,9 @@ int MqttCtrlClass::configurationsUpdate() {
 }
 
 int MqttCtrlClass::warehouseDataUpdate(uint8_t type) {
+  if (WifiMgr.getStatus() != WL_CONNECTED)
+    return ESP_FAIL;
+
   if (s_mqttctrl_status != MQC_CONNECTED) {
     this->reconnect();
     return ESP_FAIL;

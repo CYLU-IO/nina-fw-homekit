@@ -5,6 +5,5 @@ void moduleLiveCheck(void*);
 void recordSumCurrent(void*);
 void productLifetimeCounter(void*);
 void mqttConnectionCheck(void*);
-void avgSystemCurrentCalc(void*);
 
 #endif

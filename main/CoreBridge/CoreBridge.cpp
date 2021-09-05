@@ -78,6 +78,21 @@ int CoreBridgeClass::digitalWrite(uint8_t pin, uint8_t state) {
   return ESP_OK;
 }
 
+int CoreBridgeClass::reset2Factory() {
+  int n = this->getModuleNum();
+
+  char* p = new char[n + 1]{ CMD_RESET_MODULE };
+  for (int i = 1; i <= n; i++)
+    p[i] = i;
+  queue.push(3, n + 1, p);
+
+  return ESP_OK;
+}
+
+void CoreBridgeClass::restart() {
+  this->digitalWrite(RST_PIN, 0);
+}
+
 int CoreBridgeClass::requestModulesData(uint8_t type) {
   char* p = new char[2]{ CMD_REQ_DATA, type };
   queue.push(3, 2, p);

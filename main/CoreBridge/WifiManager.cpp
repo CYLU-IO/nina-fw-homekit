@@ -35,7 +35,7 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base, int32_t event
     if (strlen((const char*)wifi_config.sta.ssid)) {
       WifiMgr.connect(wifi_config);
     } else {
-      xTaskCreate(smarconfig_task, "smarconfig_task", 2048, NULL, 3, NULL);
+      xTaskCreate(smarconfig_task, "smartconfig_task", 3072, NULL, 3, NULL);
     }
   } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
     s_wifi_status = WL_DISCONNECTED;

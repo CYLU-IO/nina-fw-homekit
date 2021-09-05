@@ -12,6 +12,7 @@
 #define RECORD_SUM_CURRENT_INTERVAL 300000 //5 minutes
 
 ///// PIN SETS /////
+#define RST_PIN                 2
 #define WIFI_STATE_PIN          7
 #define MODULES_STATE_PIN       9
 

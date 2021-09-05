@@ -9,6 +9,7 @@
 #include <CoreBridge.h>
 
 static uint16_t avg_system_current = 0;
+static uint8_t avg_sys_current_count = 0;
 
 void moduleLiveCheck(void*) {
   unsigned long t = millis();
@@ -169,16 +170,20 @@ void recordSumCurrent(void*) {
         if (timeinfo.tm_hour == 0)
           Warehouse.updateRecordedHourPtr(255);
 
-        if (!Warehouse.isLastDateDataToday(&timeinfo))
+        ///// Appened Today's Date Record if Not Existed
+        if (!Warehouse.isLastDateDataToday(&timeinfo)) {
           Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, 0);
+          MqttCtrl.warehouseDataUpdate(1);
+        }
 
-        int* buffer = new int[1]{ avg_system_current };
+        ///// Hold Average System Curre t if No Houry Data /////
+        if (avg_sys_current_count == 0)
+          avg_system_current = CoreBridge.system_status.sum_current;
 
-        Warehouse.appendHourlyRecord(timeinfo.tm_hour, CoreBridge.system_status.sum_current);
-        //MqttCtrl.warehouseRequestBufferUpdate(buffer, 1);
+        Warehouse.appendHourlyRecord(timeinfo.tm_hour, avg_system_current);
+        MqttCtrl.warehouseDataUpdate(0);
         avg_system_current = 0;
-        delete[] buffer;
-
+        avg_sys_current_count = 0;
 
         if (timeinfo.tm_hour == 23) { //New day is coming, summing current records
           int avg_sum_current = 0;
@@ -188,15 +193,22 @@ void recordSumCurrent(void*) {
 
           avg_sum_current /= Warehouse.getHourDataLength();
           Warehouse.writeAsInt16(avg_sum_current, EEPROM_DATE_DATA_PTR + (Warehouse.getRecordedDatePtr() * 5) + 3);
+          MqttCtrl.warehouseDataUpdate(1);
         }
+
+        ///// Delay Five Minutues then Accumulate Average System Current /////
+        previousHr = timeinfo.tm_hour;
+        vTaskDelay(5 * 60 * 1000 / portTICK_PERIOD_MS);
+      } else {
+        CoreBridge.requestModulesData(MODULE_CURRENT);
+        avg_system_current = (avg_system_current + CoreBridge.system_status.sum_current) / 2;
+        avg_sys_current_count++;
+
+        time(&now);
+        localtime_r(&now, &timeinfo);
+
+        vTaskDelay(min(5 * 60 * 1000, (((59 - timeinfo.tm_min) * 60) + (60 - timeinfo.tm_sec)) * 1000) / portTICK_PERIOD_MS);
       }
-
-      ///// Delay Until Next Hour Comes /////
-      time(&now);
-      localtime_r(&now, &timeinfo);
-
-      previousHr = timeinfo.tm_hour;
-      vTaskDelay((((59 - timeinfo.tm_min) * 60) + (60 - timeinfo.tm_sec)) * 1000 / portTICK_PERIOD_MS);
     } else {
       taskYIELD();
     }
@@ -204,25 +216,11 @@ void recordSumCurrent(void*) {
 }
 
 void productLifetimeCounter(void*) {
-  while (1)
-  {
+  while (1) {
     vTaskDelay(60 * 60 * 1000 / portTICK_PERIOD_MS);
   }
 }
 
 void mqttConnectionCheck(void*) {
 
-}
-
-void avgSystemCurrentCalc(void*) {
-  while (1) {
-    if (CoreBridge.system_status.module_initialized) {
-      CoreBridge.requestModulesData(MODULE_CURRENT);
-      avg_system_current = (avg_system_current + CoreBridge.system_status.sum_current) / 2;
-
-      vTaskDelay(5 * 60 * 1000 / portTICK_PERIOD_MS);
-    } else {
-      taskYIELD();
-    }
-  }
 }
