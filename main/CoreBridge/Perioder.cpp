@@ -38,6 +38,7 @@ void moduleLiveCheck(void*) {
           CoreBridge.removeModules();
           Homekit.createAccessory(CoreBridge.serial_number, CoreBridge.device_name);
           Homekit.beginAccessory();
+          MqttCtrl.modulesUpdate();
 
           modules_removed = true;
         }
@@ -56,7 +57,7 @@ void moduleLiveCheck(void*) {
   }
 }
 
-void recordSumCurrent(void*) {
+void onlinePeriodicTask(void*) {
   ///// Setup SNTP Service /////
   time_t now;
   tm timeinfo;
@@ -196,19 +197,18 @@ void recordSumCurrent(void*) {
           MqttCtrl.warehouseDataUpdate(1);
         }
 
-        ///// Delay Five Minutues then Accumulate Average System Current /////
         previousHr = timeinfo.tm_hour;
-        vTaskDelay(5 * 60 * 1000 / portTICK_PERIOD_MS);
       } else {
-        CoreBridge.requestModulesData(MODULE_CURRENT);
+        ///// Calculate Average System Current /////
         avg_system_current = (avg_system_current + CoreBridge.system_status.sum_current) / 2;
         avg_sys_current_count++;
 
-        time(&now);
-        localtime_r(&now, &timeinfo);
-
-        vTaskDelay(min(5 * 60 * 1000, (((59 - timeinfo.tm_min) * 60) + (60 - timeinfo.tm_sec)) * 1000) / portTICK_PERIOD_MS);
+        CoreBridge.requestModulesData(MODULE_CURRENT);
       }
+
+      time(&now);
+      localtime_r(&now, &timeinfo);
+      vTaskDelay(min(5 * 60 * 1000, (((59 - timeinfo.tm_min) * 60) + (60 - timeinfo.tm_sec)) * 1000) / portTICK_PERIOD_MS);
     } else {
       taskYIELD();
     }
@@ -219,8 +219,4 @@ void productLifetimeCounter(void*) {
   while (1) {
     vTaskDelay(60 * 60 * 1000 / portTICK_PERIOD_MS);
   }
-}
-
-void mqttConnectionCheck(void*) {
-
 }

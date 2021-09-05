@@ -33,7 +33,6 @@ CoreBridgeClass::CoreBridgeClass() {
 
 void CoreBridgeClass::init() {
   Homekit.init();
-  WifiMgr.begin();
   Warehouse.begin();
 }
 

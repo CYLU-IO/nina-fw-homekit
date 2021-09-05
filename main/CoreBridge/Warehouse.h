@@ -51,7 +51,7 @@ public:
   uint16_t readAsInt16(uint16_t ptr);
 };
 
-void clearStorage(void* param);
+void clearWarehouseData(void*);
 
 extern WarehouseClass Warehouse;
 

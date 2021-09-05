@@ -61,7 +61,7 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base, int32_t event
     MqttCtrl.begin();
 
     ///// Start Periodic Hourly Tasks /////
-    xTaskCreate(recordSumCurrent, "record_sum_current", 2048, NULL, 1, NULL);
+    xTaskCreate(onlinePeriodicTask, "record_sum_current", 2048, NULL, 1, NULL);
 
     xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
   } else if (event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD) {

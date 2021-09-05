@@ -182,7 +182,7 @@ bool WarehouseClass::isLastDateDataToday(tm* timeinfo) {
   return false;
 }
 
-void clearStorage(void*) {
+void clearWarehouseData(void*) {
   time_t now;
   tm timeinfo;
 
