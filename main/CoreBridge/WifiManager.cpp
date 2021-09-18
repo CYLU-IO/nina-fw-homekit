@@ -35,7 +35,7 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base, int32_t event
     if (strlen((const char*)wifi_config.sta.ssid)) {
       WifiMgr.connect(wifi_config);
     } else {
-      xTaskCreate(smarconfig_task, "smartconfig_task", 3072, NULL, 3, NULL);
+      xTaskCreate(smarconfig_task, "smartconfig_task", 2048, NULL, 3, NULL);
     }
   } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
     s_wifi_status = WL_DISCONNECTED;
@@ -60,8 +60,8 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base, int32_t event
     CoreBridge.digitalWrite(WIFI_STATE_PIN, 1);
     MqttCtrl.begin();
 
-    ///// Start Periodic Hourly Tasks /////
-    xTaskCreate(onlinePeriodicTask, "record_sum_current", 2048, NULL, 1, NULL);
+    ///// Start Periodic Tasks /////
+    xTaskCreate(onlinePeriodicTask, "custom_opt", 3072, NULL, 1, NULL);
 
     xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
   } else if (event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD) {

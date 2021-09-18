@@ -3,6 +3,8 @@
 #include "nvs_flash.h"
 #include "cJSON.h"
 
+#include <hap_platform_keystore.h>
+
 #include <CoreBridge.h>
 
 uartMsgQueue queue;
@@ -20,9 +22,8 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
       case 0x00: //SAMD21 init
       {
         WifiMgr.begin();
-
+        
         ///// Define Routine Tasks /////
-        xTaskCreate(productLifetimeCounter, "custom_plc", 2048, NULL, 1, NULL);
         xTaskCreate(moduleLiveCheck, "custom_mlc", 2048, NULL, 1, NULL);
 
         ///// Reconnection Trial /////
@@ -36,7 +37,7 @@ int uartReceive(const uint8_t command[], uint8_t response[]) {
         CoreBridge.digitalWrite(WIFI_STATE_PIN, 0);
         CoreBridge.digitalWrite(MODULES_STATE_PIN, 0);
 
-        nvs_flash_erase();
+        nvs_flash_erase_partition(hap_platform_keystore_get_nvs_partition_name());
         esp_restart();
         break;
       }

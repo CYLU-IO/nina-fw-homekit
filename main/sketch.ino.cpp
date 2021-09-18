@@ -36,15 +36,19 @@ void setup() {
   CoreBridge.digitalWrite(WIFI_STATE_PIN, 0);
   CoreBridge.digitalWrite(MODULES_STATE_PIN, 0);
 
+  ///// NINA Periodic Task /////
+  xTaskCreate(productLifetimeCounter, "custom_plc", 2048, NULL, 1, NULL);
+
   ///// TEST //////
-  /*CoreBridge.removeModules();
+  WifiMgr.begin();
+  CoreBridge.removeModules();
   Homekit.createAccessory(CoreBridge.serial_number, CoreBridge.device_name);
   CoreBridge.addModule(3, "Switch 4", 0, 1, 0);
   CoreBridge.addModule(2, "Switch 3", 0, 1, 0);
   CoreBridge.addModule(1, "Switch 2", 0, 1, 0);
   CoreBridge.addModule(0, "Switch 1", 0, 1, 0);
   Homekit.beginAccessory();
-  MqttCtrl.modulesUpdate();*/
+  MqttCtrl.modulesUpdate();
   //CoreBridge.setModuleValue(0, 1);
   ///// TEST END /////
 }

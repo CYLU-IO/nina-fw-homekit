@@ -67,6 +67,8 @@ int hap_platform_keystore_init_partition(const char *part_name, bool read_only);
  */
 int hap_platform_keystore_get(const char *part_name, const char *name_space, const char *key, uint8_t *val, size_t *val_size);
 
+int hap_platform_keystore_get_u64(const char *part_name, const char *name_space, const char *key, uint64_t *val);
+
 int hap_platform_keystore_get_str(const char *part_name, const char *name_space, const char *key, char *val, size_t *val_size);
 
 /** Set Value in Key Store
@@ -81,6 +83,8 @@ int hap_platform_keystore_get_str(const char *part_name, const char *name_space,
  * @return -1 on error
  */
 int hap_platform_keystore_set(const char *part_name, const char *name_space, const char *key, const uint8_t *val, const size_t val_len);
+
+int hap_platform_keystore_set_u64(const char *part_name, const char *name_space, const char *key, const uint64_t *val);
 
 int hap_platform_keystore_set_str(const char *part_name, const char *name_space, const char *key, const char *val, const size_t val_len);
 

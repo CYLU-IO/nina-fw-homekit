@@ -29,6 +29,15 @@ CoreBridgeClass::CoreBridgeClass() {
 
   //Serial Number (factory NVS)
   strncpy((char*)serial_number, "TW0138WJC9T", SERIAL_NUMBER_LENGTH);
+
+  //Running Time
+  if (hap_platform_keystore_get_u64(hap_platform_keystore_get_factory_nvs_partition_name(), "statistics", "running_time", (uint64_t*)&running_time) != HAP_SUCCESS)
+    this->setRunningTime(0);
+
+  //MQTT Host
+  size = sizeof(MqttCtrl.host);
+  if (hap_platform_keystore_get_str(hap_platform_keystore_get_nvs_partition_name(), "configurations", "mqtt_host", (char*)&MqttCtrl.host, &size) != HAP_SUCCESS)
+    this->setMQTTHost("49.158.2.58:1883"); //default
 }
 
 void CoreBridgeClass::init() {
@@ -46,6 +55,20 @@ int CoreBridgeClass::setDeviceName(const char* name) {
 int CoreBridgeClass::setEnablePOP(uint8_t state) {
   smf_status.enable_pop = state;
   hap_platform_keystore_set(hap_platform_keystore_get_nvs_partition_name(), "configurations", "enable_pop", (uint8_t*)&smf_status.enable_pop, sizeof(smf_status.enable_pop));
+
+  return ESP_OK;
+}
+
+int CoreBridgeClass::setRunningTime(uint32_t hrs) {
+  running_time = hrs;
+  hap_platform_keystore_set_u64(hap_platform_keystore_get_factory_nvs_partition_name(), "statistics", "running_time", (uint64_t*)&running_time);
+
+  return ESP_OK;
+}
+
+int CoreBridgeClass::setMQTTHost(const char* host) {
+  strncpy((char*)MqttCtrl.host, host, MQTT_HOST_LENGTH);
+  hap_platform_keystore_set_str(hap_platform_keystore_get_nvs_partition_name(), "configurations", "mqtt_host", (const char*)&MqttCtrl.host, sizeof(MqttCtrl.host));
 
   return ESP_OK;
 }

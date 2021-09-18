@@ -43,6 +43,7 @@ private:
 public:
   char serial_number[SERIAL_NUMBER_LENGTH + 1];
   char device_name[DEVICE_NAME_LENGTH + 1];
+  uint32_t running_time;
 
   static system_status_t system_status;
   static smart_modularized_fuse_status_t smf_status;
@@ -53,6 +54,8 @@ public:
 
   int setDeviceName(const char* name);
   int setEnablePOP(uint8_t state);
+  int setRunningTime(uint32_t hrs);
+  int setMQTTHost(const char* host);
 
   int addModule(uint8_t index, const char* name, uint8_t type, uint8_t priority, uint8_t state);
   int removeModules();

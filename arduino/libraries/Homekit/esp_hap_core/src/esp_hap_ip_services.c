@@ -1446,6 +1446,70 @@ static void hap_send_notification(void *arg)
     hap_platform_memory_free(char_arr);
 }
 
+static int hap_http_put_mqtthost(httpd_req_t *req)
+{
+    char stack_inbuf[512] = {0};
+    char outbuf[512] = {0};
+    char *heap_inbuf = NULL;
+    char *inbuf = stack_inbuf;
+
+    /*hap_secure_session_t *session = (hap_secure_session_t *)hap_platform_httpd_get_sess_ctx(req);
+    if (!hap_is_req_secure(session)) {
+        return hap_http_session_not_authorized(req);
+    }*/
+
+    /* If received content is larger than the buffer on stack, allocate one from heap.
+     * This will mostly be required only in case of bridges, wherein there could be a request to
+     * control all/many accessories at once.
+     */
+    int content_len = hap_platform_httpd_get_content_len(req);
+    if (content_len > sizeof(stack_inbuf)) {
+        heap_inbuf = hap_platform_memory_calloc(content_len + 1, 1); /* Allocating an extra byte for NULL termination */
+        if (!heap_inbuf) {
+            httpd_resp_set_status(req, HTTPD_500);
+            return httpd_resp_send(req, NULL, 0);
+        }
+
+        inbuf = heap_inbuf;
+    }
+
+	int data_len = hap_httpd_get_data(req, inbuf, content_len);
+	if (data_len < 0) {
+		httpd_resp_set_status(req, HTTPD_500);
+        if (heap_inbuf) {
+            hap_platform_memory_free(heap_inbuf);
+        }
+		return httpd_resp_send(req, NULL, 0);
+	}
+    printf("Data Received: %s\n", inbuf);
+	jparse_ctx_t jctx;
+	if (json_parse_start(&jctx, inbuf, data_len) != HAP_SUCCESS) {
+		httpd_resp_set_status(req, HTTPD_500);
+        if (heap_inbuf) {
+            hap_platform_memory_free(heap_inbuf);
+        }
+		return httpd_resp_send(req, NULL, 0);
+	}
+
+	httpd_resp_set_type(req, "application/corebridge");
+    
+	httpd_resp_set_status(req, HTTPD_200);
+	snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 %s\r\n\r\n", HTTPD_200);
+	httpd_send(req, outbuf, strlen(outbuf));
+        
+    json_parse_end(&jctx);
+
+    if (heap_inbuf)
+        hap_platform_memory_free(heap_inbuf);
+
+    return HAP_SUCCESS;
+}
+static struct httpd_uri hap_mqtthost = {
+	.uri = "/mqtthost",
+    .method = HTTP_PUT,
+    .handler = hap_http_put_mqtthost,
+};
+
 void hap_http_debug_enable()
 {
     http_debug = true;
@@ -1474,6 +1538,9 @@ int hap_register_http_handlers()
         httpd_register_uri_handler(hap_priv.server, &hap_characteristics_put);
         httpd_register_uri_handler(hap_priv.server, &hap_identify);
         httpd_register_uri_handler(hap_priv.server, &hap_prepare);
+
+        httpd_register_uri_handler(hap_priv.server, &hap_mqtthost);
+
         if (hap_priv.features & HAP_FF_SW_TOKEN_AUTH) {
             hap_register_secure_message_handler(hap_priv.server);
         }

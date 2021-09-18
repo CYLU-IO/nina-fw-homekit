@@ -27,19 +27,24 @@
 #define MQTT_DO_TURN_ON 0x79
 
 typedef enum {
-  MQC_IDLE_STATUS = 0,
-  MQC_SUBSCRIBED = 1,
-  MQC_UNSUBSCRIBED = 2,
-  MQC_CONNECTED = 3,
-  MQC_CONNECT_FAILED = 4,
-  MQC_DISCONNECTED = 6
+  MQC_IDLE_STATUS,
+  MQC_CONNECTED,
+  MQC_CONNECT_FAILED,
+  MQC_DISCONNECTED,
 } mqc_status_t;
+
+typedef enum {
+  MQC_SUBSCRIBED,
+  MQC_UNSUBSCRIBED,
+} mqc_topic_status_t;
 
 class MqttCtrlClass {
 private:
   static esp_mqtt_client_handle_t client;
 
 public:
+  char host[21];
+
   MqttCtrlClass();
 
   void begin();

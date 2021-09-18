@@ -12,48 +12,50 @@ static uint16_t avg_system_current = 0;
 static uint8_t avg_sys_current_count = 0;
 
 void moduleLiveCheck(void*) {
-  unsigned long t = millis();
   bool sent = false;
 
   while (1) {
-    if (!sent && CoreBridge.system_status.module_initialized) {
-      ///// Send HI Signal /////
-      char* p = new char[1]{ CMD_HI };
-      queue.push(1, 1, p);
+    if (CoreBridge.system_status.module_initialized) {
+      if (!sent) {
+        ///// Send HI Signal /////
+        char* p = new char[1]{ CMD_HI };
+        queue.push(3, 1, p);
 
-      CoreBridge.system_status.module_connected = false;
+        CoreBridge.system_status.module_connected = false;
 
-      sent = true;
-      t = millis();
-    }
-
-    if (sent && millis() - t > LIVE_DETECT_INTERVAL) {
-      static bool modules_removed = false;
-
-      if (!CoreBridge.system_status.module_connected) {
-        if (!modules_removed) {
-          CoreBridge.digitalWrite(MODULES_STATE_PIN, 0);
-
-          ///// Create an Empty Accessory /////
-          CoreBridge.removeModules();
-          Homekit.createAccessory(CoreBridge.serial_number, CoreBridge.device_name);
-          Homekit.beginAccessory();
-          MqttCtrl.modulesUpdate();
-
-          modules_removed = true;
-        }
-
-        ///// Attempting Reconnection /////
-        char* p = new char[2]{ CMD_LOAD_MODULE, 0x00 };
-        queue.push(1, 2, p);
-      } else {
-        modules_removed = false;
+        sent = true;
       }
 
-      sent = false;
-    }
+      vTaskDelay(LIVE_DETECT_INTERVAL / portTICK_PERIOD_MS);
 
-    taskYIELD();
+      if (sent) {
+        static bool modules_removed = false;
+
+        if (!CoreBridge.system_status.module_connected) {
+          if (!modules_removed) {
+            CoreBridge.digitalWrite(MODULES_STATE_PIN, 0);
+
+            ///// Create an Empty Accessory /////
+            CoreBridge.removeModules();
+            Homekit.createAccessory(CoreBridge.serial_number, CoreBridge.device_name);
+            Homekit.beginAccessory();
+            MqttCtrl.modulesUpdate();
+
+            modules_removed = true;
+          }
+
+          ///// Attempting Reconnection /////
+          char* p = new char[2]{ CMD_LOAD_MODULE, 0x00 };
+          queue.push(1, 2, p);
+        } else {
+          modules_removed = false;
+        }
+
+        sent = false;
+      }
+    } else {
+      taskYIELD();
+    }
   }
 }
 
@@ -216,7 +218,12 @@ void onlinePeriodicTask(void*) {
 }
 
 void productLifetimeCounter(void*) {
+  printf("Running_time: %i\n", CoreBridge.running_time);
+
   while (1) {
-    vTaskDelay(60 * 60 * 1000 / portTICK_PERIOD_MS);
+    printf("Running_time: %i\n", CoreBridge.running_time);
+    ///CoreBridge.setRunningTime(CoreBridge.running_time + 1);
+
+    vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
   }
 }

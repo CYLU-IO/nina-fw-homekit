@@ -23,7 +23,8 @@
 
 #include "CoreBridge.h"
 
-static int s_mqttctrl_status = 255;
+static int s_mqttctrl_status = MQC_IDLE_STATUS;
+static int s_mqttctrl_topic_status = MQC_UNSUBSCRIBED;
 
 esp_mqtt_client_handle_t MqttCtrlClass::client;
 
@@ -54,21 +55,21 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
     case MQTT_EVENT_SUBSCRIBED:
     {
+      s_mqttctrl_topic_status = MQC_SUBSCRIBED;
       esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":1}", 0, 2, 1);
       break;
     }
 
     case MQTT_EVENT_UNSUBSCRIBED:
     {
-      esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":0}", 0, 2, 1);
+      s_mqttctrl_topic_status = MQC_UNSUBSCRIBED;
+      esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":2}", 0, 2, 1);
       break;
     }
 
     case MQTT_EVENT_DATA:
     {
       if (strcmp(event->topic, MQTT_URL_CMD)) break;
-
-      printf("Receive MQTT request\n");
 
       int length = (event->data[1] & 0xff) | (event->data[2] << 8);
 
@@ -171,9 +172,14 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
   }
 }
 
-MqttCtrlClass::MqttCtrlClass() {
+MqttCtrlClass::MqttCtrlClass() {}
+
+void MqttCtrlClass::begin() {
+  char mqtt_uri[MQTT_HOST_LENGTH + 12];
+  snprintf(mqtt_uri, sizeof(mqtt_uri), "ws://%s/mqtt", host);
+
   const esp_mqtt_client_config_t mqtt_cfg = {
-      .uri = "ws://www.cylu.io:1883/mqtt",
+      .uri = mqtt_uri,
       .lwt_topic = MQTT_URL_STATUS,
       .lwt_msg = "{\"type\":\"CONNC\",\"value\":0}",
       .lwt_qos = 0,
@@ -185,9 +191,7 @@ MqttCtrlClass::MqttCtrlClass() {
   esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
 
   s_mqttctrl_status = MQC_IDLE_STATUS;
-}
 
-void MqttCtrlClass::begin() {
   esp_mqtt_client_start(client);
 }
 
@@ -307,6 +311,7 @@ int MqttCtrlClass::configurationsUpdate() {
 
   cJSON_AddStringToObject(root, "device_name", CoreBridge.device_name);
   cJSON_AddStringToObject(root, "serial_number", CoreBridge.serial_number);
+  cJSON_AddNumberToObject(root, "running_time", CoreBridge.running_time);
   cJSON_AddNumberToObject(root, "enable_pop", CoreBridge.smf_status.enable_pop);
 
   char* jsonPrint = cJSON_Print(root);
