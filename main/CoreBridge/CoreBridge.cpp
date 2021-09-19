@@ -10,11 +10,15 @@
 system_status_t CoreBridgeClass::system_status;
 smart_modularized_fuse_status_t CoreBridgeClass::smf_status;
 
-CoreBridgeClass::CoreBridgeClass() {
+CoreBridgeClass::CoreBridgeClass() {}
+
+void CoreBridgeClass::init() {
+  Homekit.init();
+  Warehouse.begin();
+
   ///// Configuration Restoration /////
   memset(&serial_number, 0x00, sizeof(serial_number));
   memset(&device_name, 0x00, sizeof(device_name));
-  hap_platform_keystore_init_partition(hap_platform_keystore_get_nvs_partition_name(), false);
   size_t size;
 
   //Enable POP
@@ -31,18 +35,14 @@ CoreBridgeClass::CoreBridgeClass() {
   strncpy((char*)serial_number, "TW0138WJC9T", SERIAL_NUMBER_LENGTH);
 
   //Running Time
-  if (hap_platform_keystore_get_u64(hap_platform_keystore_get_factory_nvs_partition_name(), "statistics", "running_time", (uint64_t*)&running_time) != HAP_SUCCESS)
+  size = sizeof(running_time);
+  if (hap_platform_keystore_get_u64(hap_platform_keystore_get_factory_nvs_partition_name(), "statistics", "running_time", (uint64_t*)&running_time, &size) != HAP_SUCCESS)
     this->setRunningTime(0);
 
   //MQTT Host
   size = sizeof(MqttCtrl.host);
   if (hap_platform_keystore_get_str(hap_platform_keystore_get_nvs_partition_name(), "configurations", "mqtt_host", (char*)&MqttCtrl.host, &size) != HAP_SUCCESS)
     this->setMQTTHost("49.158.2.58:1883"); //default
-}
-
-void CoreBridgeClass::init() {
-  Homekit.init();
-  Warehouse.begin();
 }
 
 int CoreBridgeClass::setDeviceName(const char* name) {
@@ -61,7 +61,7 @@ int CoreBridgeClass::setEnablePOP(uint8_t state) {
 
 int CoreBridgeClass::setRunningTime(uint32_t hrs) {
   running_time = hrs;
-  hap_platform_keystore_set_u64(hap_platform_keystore_get_factory_nvs_partition_name(), "statistics", "running_time", (uint64_t*)&running_time);
+  hap_platform_keystore_set_u64(hap_platform_keystore_get_factory_nvs_partition_name(), "statistics", "running_time", (uint64_t*)&running_time, sizeof(running_time));
 
   return ESP_OK;
 }

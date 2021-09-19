@@ -134,7 +134,7 @@ int hap_platform_keystore_get(const char *part_name, const char *name_space, con
     return -1;
 }
 
-int hap_platform_keystore_get_u64(const char *part_name, const char *name_space, const char *key, uint64_t *val)
+int hap_platform_keystore_get_u64(const char *part_name, const char *name_space, const char *key, uint64_t *val, size_t *val_size)
 {
     nvs_handle handle;
     esp_err_t err = nvs_open_from_partition(part_name, name_space, NVS_READONLY, &handle);
@@ -144,7 +144,7 @@ int hap_platform_keystore_get_u64(const char *part_name, const char *name_space,
     }
     else
     {
-        err = nvs_get_u64(handle, key, val);
+        err = nvs_get_blob(handle, key, val, val_size);
         nvs_close(handle);
     }
     if (err == ESP_OK)
@@ -202,7 +202,7 @@ int hap_platform_keystore_set(const char *part_name, const char *name_space, con
     return -1;
 }
 
-int hap_platform_keystore_set_u64(const char *part_name, const char *name_space, const char *key, const uint64_t *val)
+int hap_platform_keystore_set_u64(const char *part_name, const char *name_space, const char *key, const uint64_t *val, const size_t val_len)
 {
     nvs_handle handle;
     esp_err_t err = nvs_open_from_partition(part_name, name_space, NVS_READWRITE, &handle);
@@ -212,7 +212,7 @@ int hap_platform_keystore_set_u64(const char *part_name, const char *name_space,
     }
     else
     {
-        err = nvs_set_u64(handle, key, val);
+        err = nvs_set_blob(handle, key, val, val_len);
         if (err != ESP_OK)
         {
             ESP_LOGE(TAG, "Failed to write %s", key);

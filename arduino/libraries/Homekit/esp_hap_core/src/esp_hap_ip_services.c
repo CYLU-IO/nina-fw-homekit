@@ -1491,7 +1491,7 @@ static int hap_http_put_mqtthost(httpd_req_t *req)
 		return httpd_resp_send(req, NULL, 0);
 	}
 
-	httpd_resp_set_type(req, "application/corebridge");
+	httpd_resp_set_type(req, "application/json");
     
 	httpd_resp_set_status(req, HTTPD_200);
 	snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 %s\r\n\r\n", HTTPD_200);

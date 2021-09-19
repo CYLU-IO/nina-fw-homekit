@@ -218,12 +218,9 @@ void onlinePeriodicTask(void*) {
 }
 
 void productLifetimeCounter(void*) {
-  printf("Running_time: %i\n", CoreBridge.running_time);
-
   while (1) {
-    printf("Running_time: %i\n", CoreBridge.running_time);
-    ///CoreBridge.setRunningTime(CoreBridge.running_time + 1);
-
-    vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+    vTaskDelay(60 * 1000 * 60 / portTICK_PERIOD_MS);
+    
+    CoreBridge.setRunningTime(CoreBridge.running_time + 1);
   }
 }
