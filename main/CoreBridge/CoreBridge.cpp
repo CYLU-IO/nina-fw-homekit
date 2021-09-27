@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+#include <sys/time.h>
+#include <esp_sntp.h>
 
 #include <hap_platform_keystore.h>
 
@@ -13,8 +16,9 @@ smart_modularized_fuse_status_t CoreBridgeClass::smf_status;
 CoreBridgeClass::CoreBridgeClass() {}
 
 void CoreBridgeClass::init() {
+  ///// Storage Service Initialization /////
   Homekit.init();
-  Warehouse.begin();
+  Warehouse.init();
 
   ///// Configuration Restoration /////
   memset(&serial_number, 0x00, sizeof(serial_number));
@@ -43,6 +47,9 @@ void CoreBridgeClass::init() {
   size = sizeof(MqttCtrl.host);
   if (hap_platform_keystore_get_str(hap_platform_keystore_get_nvs_partition_name(), "configurations", "mqtt_host", (char*)&MqttCtrl.host, &size) != HAP_SUCCESS)
     this->setMQTTHost("49.158.2.58:1883"); //default
+
+  ///// MQTT Service Initialization /////
+  MqttCtrl.init();
 }
 
 int CoreBridgeClass::setDeviceName(const char* name) {
@@ -71,6 +78,42 @@ int CoreBridgeClass::setMQTTHost(const char* host) {
   hap_platform_keystore_set_str(hap_platform_keystore_get_nvs_partition_name(), "configurations", "mqtt_host", (const char*)&MqttCtrl.host, sizeof(MqttCtrl.host));
 
   return ESP_OK;
+}
+
+int CoreBridgeClass::initTime() {
+  ///// Setup SNTP Service /////
+  time(&now);
+  localtime_r(&now, &timeinfo);
+
+  uint8_t trials = 0;
+
+  if (timeinfo.tm_year < (2016 - 1900)) {
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, "pool.ntp.org");
+    sntp_setservername(1, "time.google.com");
+    sntp_setservername(2, "time.asia.apple.com");
+    sntp_init();
+
+    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET) {
+      if (trials > 10) esp_restart();
+
+      vTaskDelay(3000 / portTICK_PERIOD_MS);
+      trials++;
+    }
+
+    time(&now);
+  }
+
+  setenv("TZ", "CST-8", 1);
+  tzset();
+  localtime_r(&now, &timeinfo);
+
+  return ESP_OK;
+}
+
+void CoreBridgeClass::getTime() {
+  time(&now);
+  localtime_r(&now, &timeinfo);
 }
 
 int CoreBridgeClass::addModule(uint8_t index, const char* name, uint8_t type, uint8_t priority, uint8_t state) {

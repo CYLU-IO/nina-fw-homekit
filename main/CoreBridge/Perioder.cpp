@@ -1,7 +1,4 @@
 #include <stdio.h>
-#include <time.h>
-#include <sys/time.h>
-#include "esp_sntp.h"
 #include "cJSON.h"
 
 #include <hap_platform_keystore.h>
@@ -60,40 +57,6 @@ void moduleLiveCheck(void*) {
 }
 
 void onlinePeriodicTask(void*) {
-  ///// Setup SNTP Service /////
-  time_t now;
-  tm timeinfo;
-
-  time(&now);
-  localtime_r(&now, &timeinfo);
-
-  uint8_t trials = 0;
-
-  if (timeinfo.tm_year < (2016 - 1900)) {
-    printf("Time is not set yet. Setting SNTP.\n");
-
-    sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    sntp_setservername(0, "pool.ntp.org");
-    sntp_setservername(1, "time.google.com");
-    sntp_setservername(2, "time.asia.apple.com");
-    sntp_init();
-
-    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET) {
-      if (trials > 10)
-        esp_restart();
-
-      printf("Waiting for system time to be set...\n");
-      vTaskDelay(2000 / portTICK_PERIOD_MS);
-      trials++;
-    }
-
-    time(&now);
-  }
-
-  setenv("TZ", "CST-8", 1);
-  tzset();
-  localtime_r(&now, &timeinfo);
-
   ///// Warehouse TEST /////
   //Warehouse.formatZero(false);
 
@@ -135,17 +98,10 @@ void onlinePeriodicTask(void*) {
   printf("Date Data in JSON: %s\n", jsonPrint);
   cJSON_free(jsonPrint);
   cJSON_Delete(root);*/
-
-  //Insert Warning into Logs
-
-
-  //Test Logs Data to Json
-
-  //Remove All Logs
   ///// Warehouse END /////
 
   ///// Sum Current if Not Today /////
-  if (Warehouse.getDateDataLength() > 0 && !Warehouse.isLastDateDataToday(&timeinfo)) {
+  if (Warehouse.getDateDataLength() > 0 && !Warehouse.isLastDateDataToday(&CoreBridge.timeinfo)) {
     int avg_sum_current = 0;
 
     for (int i = 0; i < Warehouse.getHourDataLength(); i++)
@@ -154,7 +110,9 @@ void onlinePeriodicTask(void*) {
     avg_sum_current /= 24;
     Warehouse.writeAsInt16(avg_sum_current, EEPROM_DATE_DATA_PTR + (Warehouse.getRecordedDatePtr() * 5) + 3);
     Warehouse.updateRecordedHourPtr(255);
-    Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, 0);
+
+    CoreBridge.getTime();
+    Warehouse.appendDateRecord(CoreBridge.timeinfo.tm_year, CoreBridge.timeinfo.tm_mon, CoreBridge.timeinfo.tm_mday, 0);
   }
 
   ///// Check Hour Conflict //////
@@ -165,30 +123,29 @@ void onlinePeriodicTask(void*) {
 
   while (1) {
     if (CoreBridge.system_status.module_initialized) {
-      time(&now);
-      localtime_r(&now, &timeinfo);
+      CoreBridge.getTime();
 
-      if (timeinfo.tm_hour != previousHr) {
+      if (CoreBridge.timeinfo.tm_hour != previousHr) {
         ///// Restart Daily Current Record /////
-        if (timeinfo.tm_hour == 0)
+        if (CoreBridge.timeinfo.tm_hour == 0)
           Warehouse.updateRecordedHourPtr(255);
 
         ///// Appened Today's Date Record if Not Existed
-        if (!Warehouse.isLastDateDataToday(&timeinfo)) {
-          Warehouse.appendDateRecord(timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday, 0);
-          MqttCtrl.warehouseDataUpdate(1);
+        if (!Warehouse.isLastDateDataToday(&CoreBridge.timeinfo)) {
+          Warehouse.appendDateRecord(CoreBridge.timeinfo.tm_year, CoreBridge.timeinfo.tm_mon, CoreBridge.timeinfo.tm_mday, 0);
+          //MqttCtrl.warehouseDataUpdate(1);
         }
 
         ///// Hold Average System Curre t if No Houry Data /////
         if (avg_sys_current_count == 0)
           avg_system_current = CoreBridge.system_status.sum_current;
 
-        Warehouse.appendHourlyRecord(timeinfo.tm_hour, avg_system_current);
-        MqttCtrl.warehouseDataUpdate(0);
+        Warehouse.appendHourlyRecord(CoreBridge.timeinfo.tm_hour, avg_system_current);
+        //MqttCtrl.warehouseDataUpdate(0);
         avg_system_current = 0;
         avg_sys_current_count = 0;
 
-        if (timeinfo.tm_hour == 23) { //New day is coming, summing current records
+        if (CoreBridge.timeinfo.tm_hour == 23) { //New day is coming, summing current records
           int avg_sum_current = 0;
 
           for (int i = 0; i < Warehouse.getHourDataLength(); i++)
@@ -196,10 +153,10 @@ void onlinePeriodicTask(void*) {
 
           avg_sum_current /= Warehouse.getHourDataLength();
           Warehouse.writeAsInt16(avg_sum_current, EEPROM_DATE_DATA_PTR + (Warehouse.getRecordedDatePtr() * 5) + 3);
-          MqttCtrl.warehouseDataUpdate(1);
+          //MqttCtrl.warehouseDataUpdate(1);
         }
 
-        previousHr = timeinfo.tm_hour;
+        previousHr = CoreBridge.timeinfo.tm_hour;
       } else {
         ///// Calculate Average System Current /////
         avg_system_current = (avg_system_current + CoreBridge.system_status.sum_current) / 2;
@@ -208,9 +165,8 @@ void onlinePeriodicTask(void*) {
         CoreBridge.requestModulesData(MODULE_CURRENT);
       }
 
-      time(&now);
-      localtime_r(&now, &timeinfo);
-      vTaskDelay(min(5 * 60 * 1000, (((59 - timeinfo.tm_min) * 60) + (60 - timeinfo.tm_sec)) * 1000) / portTICK_PERIOD_MS);
+      CoreBridge.getTime();
+      vTaskDelay(min(5 * 60 * 1000, (((59 - CoreBridge.timeinfo.tm_min) * 60) + (60 - CoreBridge.timeinfo.tm_sec)) * 1000) / portTICK_PERIOD_MS);
     } else {
       taskYIELD();
     }

@@ -21,7 +21,7 @@ class WarehouseClass {
 private:
 
 public:
-  void begin();
+  void init();
 
   int getCycleRecord();
   void increaseCycleRecord();

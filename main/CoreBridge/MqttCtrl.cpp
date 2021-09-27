@@ -41,6 +41,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
   switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
     {
+      printf("MQTT Connected\n");
       msg_id = esp_mqtt_client_subscribe(client, MQTT_URL_CMD, 2);
       s_mqttctrl_status = MQC_CONNECTED;
       break;
@@ -48,6 +49,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
     case MQTT_EVENT_DISCONNECTED:
     {
+      printf("MQTT Disconnected\n");
       s_mqttctrl_status = MQC_DISCONNECTED;
       esp_mqtt_client_reconnect(client);
       break;
@@ -55,13 +57,18 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
     case MQTT_EVENT_SUBSCRIBED:
     {
+      printf("MQTT Subscribed\n");
       s_mqttctrl_topic_status = MQC_SUBSCRIBED;
       esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":1}", 0, 2, 1);
+      
+      ///// Display MQTT Connection Successful /////
+      CoreBridge.digitalWrite(WIFI_STATE_PIN, 1);
       break;
     }
 
     case MQTT_EVENT_UNSUBSCRIBED:
     {
+      printf("MQTT Unsubscribed\n");
       s_mqttctrl_topic_status = MQC_UNSUBSCRIBED;
       esp_mqtt_client_publish(client, MQTT_URL_STATUS, "{\"type\":\"CONNC\",\"value\":2}", 0, 2, 1);
       break;
@@ -69,6 +76,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
     case MQTT_EVENT_DATA:
     {
+      printf("MQTT Received Data\n");
       if (strcmp(event->topic, MQTT_URL_CMD)) break;
 
       int length = (event->data[1] & 0xff) | (event->data[2] << 8);
@@ -145,7 +153,9 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
             case MQTT_CONFIG_RESET_TO_FACTORY:
             {
               CoreBridge.system_status.reset2factorying = true;
-              CoreBridge.reset2Factory();
+
+              if (CoreBridge.system_status.module_initialized) CoreBridge.reset2Factory();
+              else xTaskCreate(clearWarehouseData, "reset2factory", 2048, NULL, 10, NULL);
               break;
             }
           }
@@ -174,29 +184,31 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
 MqttCtrlClass::MqttCtrlClass() {}
 
-void MqttCtrlClass::begin() {
+void MqttCtrlClass::init() {
   char mqtt_uri[MQTT_HOST_LENGTH + 12];
   snprintf(mqtt_uri, sizeof(mqtt_uri), "ws://%s/mqtt", host);
 
   const esp_mqtt_client_config_t mqtt_cfg = {
       .uri = mqtt_uri,
-      .lwt_topic = MQTT_URL_STATUS,
-      .lwt_msg = "{\"type\":\"CONNC\",\"value\":0}",
-      .lwt_qos = 0,
-      .lwt_retain = 1,
-      .lwt_msg_len = 26,
+      //.lwt_topic = MQTT_URL_STATUS,
+      //.lwt_msg = "{\"type\":\"CONNC\",\"value\":0}",
+      //.lwt_qos = 0,
+      //.lwt_retain = 1,
+      //.lwt_msg_len = 26,
   };
 
   client = esp_mqtt_client_init(&mqtt_cfg);
   esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
 
   s_mqttctrl_status = MQC_IDLE_STATUS;
-
-  esp_mqtt_client_start(client);
 }
 
 int MqttCtrlClass::getStatus() {
   return s_mqttctrl_status;
+}
+
+int MqttCtrlClass::connect() {
+  return esp_mqtt_client_start(client);
 }
 
 int MqttCtrlClass::reconnect() {

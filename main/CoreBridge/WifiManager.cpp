@@ -53,13 +53,16 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base, int32_t event
 
     xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT);
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+    printf("WiFi Connected\n");
     s_retry_num = 0;
     s_wifi_status = WL_CONNECTED;
 
     ///// Remote Control Begins /////
-    CoreBridge.digitalWrite(WIFI_STATE_PIN, 1);
-    MqttCtrl.begin();
+    CoreBridge.initTime();
 
+    if (MqttCtrl.getStatus() == MQC_IDLE_STATUS) MqttCtrl.connect();
+    else MqttCtrl.reconnect();
+    
     ///// Start Periodic Tasks /////
     xTaskCreate(onlinePeriodicTask, "custom_opt", 3072, NULL, 1, NULL);
 
@@ -67,6 +70,7 @@ void wifimgr_event_handler(void* arg, esp_event_base_t event_base, int32_t event
   } else if (event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD) {
     smartconfig_event_got_ssid_pswd_t* evt = (smartconfig_event_got_ssid_pswd_t*)event_data;
     wifi_config_t wifi_config;
+
     uint8_t ssid[33] = { 0 };
     uint8_t password[65] = { 0 };
     uint8_t rvd_data[33] = { 0 };
@@ -152,6 +156,5 @@ void WifiManager::resetNetwork() {
   esp_wifi_restore();
   esp_restart();
 }
-
 
 WifiManager WifiMgr;

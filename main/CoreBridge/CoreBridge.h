@@ -48,6 +48,9 @@ public:
   static system_status_t system_status;
   static smart_modularized_fuse_status_t smf_status;
 
+  time_t now;
+  tm timeinfo;
+
   CoreBridgeClass();
 
   void init();
@@ -56,6 +59,9 @@ public:
   int setEnablePOP(uint8_t state);
   int setRunningTime(uint32_t hrs);
   int setMQTTHost(const char* host);
+
+  int initTime();
+  void getTime();
 
   int addModule(uint8_t index, const char* name, uint8_t type, uint8_t priority, uint8_t state);
   int removeModules();

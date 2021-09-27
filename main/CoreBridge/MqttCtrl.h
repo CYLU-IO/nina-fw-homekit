@@ -47,9 +47,11 @@ public:
 
   MqttCtrlClass();
 
-  void begin();
+  void init();
 
   int getStatus();
+
+  int connect();
   int reconnect();
   int disconnect();
   int stop();

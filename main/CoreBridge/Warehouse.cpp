@@ -3,7 +3,7 @@
 
 #include "CoreBridge.h"
 
-void WarehouseClass::begin() {
+void WarehouseClass::init() {
   Wire.begin();
 }
 
